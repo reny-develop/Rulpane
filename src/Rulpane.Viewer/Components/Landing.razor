@@ -1,0 +1,71 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Rulealize
+@* What a link with nothing in it shows: the bundled samples, and a way to put rules of your own in a link. *@
+
+<section class="card">
+    <h1>Rulpane</h1>
+    <p>A Rulealize rule set carried in a URL, turned into a screen you can operate.</p>
+</section>
+
+<section class="card">
+    <h2>Samples</h2>
+    <ul class="samples">
+        @foreach (string name in Samples)
+        {
+            <li><a href="@(BaseUri + Fragment.Build(("r", name)))">@name</a></li>
+        }
+    </ul>
+</section>
+
+<section class="card">
+    <h2>Make a link from your own rules</h2>
+    <textarea @bind="document" @bind:event="oninput" rows="12" placeholder="Paste the rule set JSON"></textarea>
+    <div class="row">
+        <button @onclick="Make">Make link</button>
+    </div>
+    @if (problem is not null)
+    {
+        <pre class="rejection">@problem</pre>
+    }
+    @if (link is not null)
+    {
+        <p><a href="@link">Open @id</a> <span class="muted">(@link.Length characters)</span></p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string BaseUri { get; set; } = default!;
+    [Parameter, EditorRequired] public string[] Samples { get; set; } = default!;
+    [Parameter, EditorRequired] public RuleRuntime Runtime { get; set; } = default!;
+
+    private string document = "";
+    private string? problem;
+    private string? link;
+    private string? id;
+
+    // Compiled before a link is made, so a link this page hands out is one that opens.
+    private void Make()
+    {
+        problem = null;
+        link = null;
+        try
+        {
+            RuleContext context = Runtime.CreateContext(document);
+            id = context.RuleSet;
+            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))));
+        }
+        catch (Exception e)
+        {
+            problem = e.Message;
+        }
+    }
+
+    // Comments are for whoever edits the document; a link only has to run it.
+    private static string Minify(string json) =>
+        JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+        })!.ToJsonString();
+}

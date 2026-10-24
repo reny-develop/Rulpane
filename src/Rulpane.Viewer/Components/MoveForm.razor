@@ -1,0 +1,49 @@
+@using System.Text.Json.Nodes
+@using Rulealize
+@* A move still waiting for values nobody enumerated — typed by the person in front of the screen. *@
+
+<form class="move-form" @onsubmit="Submit">
+    @foreach (OpenParameter parameter in Move.Open)
+    {
+        <label>
+            <span>@parameter.Name</span>
+            <input @bind="values[parameter.Name]" placeholder="@parameter.Op" />
+            @if (parameter.Description is not null)
+            {
+                <small>@parameter.Description</small>
+            }
+        </label>
+    }
+    <button type="submit">@Label</button>
+</form>
+
+@code {
+    [Parameter, EditorRequired] public ValidInput Move { get; set; } = default!;
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    [Parameter] public EventCallback<IReadOnlyDictionary<string, JsonNode?>> OnSubmit { get; set; }
+
+    private readonly Dictionary<string, string> values = new();
+
+    protected override void OnParametersSet()
+    {
+        foreach (OpenParameter parameter in Move.Open)
+        {
+            values.TryAdd(parameter.Name, "");
+        }
+    }
+
+    private Task Submit()
+    {
+        var typed = Move.Open.ToDictionary(p => p.Name, p => (JsonNode?)Convert(p, values[p.Name]));
+        return OnSubmit.InvokeAsync(typed);
+    }
+
+    // The admitting schema node says what kind of value it takes; anything else is text.
+    private static JsonNode Convert(OpenParameter parameter, string text) => parameter.Op switch
+    {
+        "type.int" when long.TryParse(text, out long i) => JsonValue.Create(i),
+        "type.number" when double.TryParse(text, out double d) => JsonValue.Create(d),
+        "type.bool" when bool.TryParse(text, out bool b) => JsonValue.Create(b),
+        _ => JsonValue.Create(text),
+    };
+}

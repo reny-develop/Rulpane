@@ -1,0 +1,327 @@
+@using System.Text.Json.Nodes
+@using Microsoft.AspNetCore.Components.Routing
+@using Rulealize
+@implements IAsyncDisposable
+@inject NavigationManager Nav
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<header class="bar">
+    <a class="brand" href="@BaseUri">Rulpane</a>
+    @if (session is not null)
+    {
+        <span class="ruleset">@session.Context.RuleSet</span>
+        <span class="spacer"></span>
+        <button class="ghost" @onclick="Restart">Start over</button>
+        <button class="ghost" @onclick="CopyLink">@(copied ? "Copied" : "Copy link")</button>
+    }
+</header>
+
+<main>
+    @if (loading)
+    {
+        <p class="muted">Loading…</p>
+    }
+    else if (error is not null)
+    {
+        <section class="card error">
+            <h2>This link cannot be opened</h2>
+            <pre>@error</pre>
+            <a href="@BaseUri">Back to the start</a>
+        </section>
+    }
+    else if (session is null)
+    {
+        <Landing BaseUri="@BaseUri" Samples="Samples" Runtime="Runtime" />
+    }
+    else
+    {
+        @if (source is { IsBundled: false })
+        {
+            <p class="notice">This page is generated from rules embedded in the link. Its author has not been verified.</p>
+        }
+
+        @if (terminal.IsTerminal)
+        {
+            <section class="card terminal">
+                <h2>Finished</h2>
+                <p>Result: <strong>@terminal.Result</strong></p>
+            </section>
+        }
+
+        @if (lastEvent is not null)
+        {
+            <p class="event">@lastEvent</p>
+        }
+
+        <div class="columns">
+            <div class="column">
+                @if (projections.Count > 0)
+                {
+                    @foreach (var (name, value) in projections)
+                    {
+                        <section class="card">
+                            <h2>@name</h2>
+                            <ValueView Value="value" />
+                        </section>
+                    }
+                }
+                else
+                {
+                    <section class="card">
+                        <h2>State</h2>
+                        <ValueView Value="session.Data" />
+                    </section>
+                }
+            </div>
+
+            <div class="column actions">
+                <section class="card">
+                    <h2>Moves</h2>
+                    @if (moves is null || moves.Count == 0)
+                    {
+                        <p class="muted">No moves are available right now.</p>
+                    }
+                    else
+                    {
+                        @foreach (var group in moves.GroupBy(m => (m.Input, m.Actor)))
+                        {
+                            <div class="move-group">
+                                <h3>
+                                    @group.Key.Input
+                                    @if (group.Key.Actor is not null)
+                                    {
+                                        <span class="actor">@group.Key.Actor</span>
+                                    }
+                                </h3>
+                                <div class="moves">
+                                    @foreach (ValidInput move in group)
+                                    {
+                                        if (move.IsComplete)
+                                        {
+                                            <button @onclick="() => Play(move, null)">@ArgumentLabel(move)</button>
+                                        }
+                                        else
+                                        {
+                                            <MoveForm Move="move" Label="@ArgumentLabel(move)" OnSubmit="values => Play(move, values)" />
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                        @if (moves.Truncated)
+                        {
+                            <p class="muted">Too many candidates: the list stops at @Session.ValidationLimit.</p>
+                        }
+                    }
+                    @if (rejection is not null)
+                    {
+                        <p class="rejection">@rejection</p>
+                    }
+                </section>
+            </div>
+        </div>
+    }
+</main>
+
+@code {
+    private static readonly RuleRuntime Runtime = CuratedRuntime.Create();
+    private static readonly string[] Samples = ["approval", "countdown", "reversi", "blackjack", "roster"];
+
+    // Compiling is the expensive part, and a rule set does not change while its state does.
+    private readonly Dictionary<string, RuleContext> compiled = new(StringComparer.Ordinal);
+
+    private bool loading = true;
+    private string? error;
+    private string? rejection;
+    private string? lastEvent;
+    private bool copied;
+    private RuleSource? source;
+    private Session? session;
+    private TerminalStatus terminal;
+    private ValidInputSet? moves;
+    private List<(string Name, JsonNode? Value)> projections = [];
+
+    private string BaseUri => Nav.BaseUri;
+
+    private IJSObjectReference? module;
+    private IJSObjectReference? listener;
+    private DotNetObjectReference<App>? self;
+    private string? loadedFragment;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        await LoadAsync(new Uri(Nav.Uri).Fragment);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/fragment.js");
+            self = DotNetObjectReference.Create(this);
+            listener = await module.InvokeAsync<IJSObjectReference>("listen", self);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        if (listener is not null)
+        {
+            await listener.InvokeVoidAsync("dispose");
+            await listener.DisposeAsync();
+        }
+
+        if (module is not null)
+        {
+            await module.DisposeAsync();
+        }
+
+        self?.Dispose();
+    }
+
+    [JSInvokable]
+    public async Task OnFragmentChanged(string fragment)
+    {
+        if (await LoadAsync(fragment, fromOutside: true))
+        {
+            StateHasChanged();
+        }
+    }
+
+    // A link clicked inside the page goes through Blazor's router rather than the browser.
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (await LoadAsync(new Uri(e.Location).Fragment, fromOutside: true))
+        {
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// The URL is the only place a position lives, so every render starts from it. Returns
+    /// whether anything was loaded; the same fragment reported twice is loaded once.
+    /// </summary>
+    private async Task<bool> LoadAsync(string fragmentText, bool fromOutside = false)
+    {
+        fragmentText = fragmentText.TrimStart('#');
+        if (fragmentText == loadedFragment)
+        {
+            return false;
+        }
+
+        // A position reached by the back button or a pasted link was not reached by the move
+        // this page last made, so what that move did is no longer what is on screen.
+        if (fromOutside)
+        {
+            lastEvent = null;
+        }
+
+        loadedFragment = fragmentText;
+        loading = false;
+        error = null;
+        rejection = null;
+        copied = false;
+        session = null;
+
+        var fragment = Fragment.Parse(fragmentText);
+        if (!fragment.TryGetValue("r", out string? rules))
+        {
+            source = null;
+            return true;
+        }
+
+        try
+        {
+            source = RuleSource.Parse(rules);
+            if (!compiled.TryGetValue(rules, out RuleContext? context))
+            {
+                context = Runtime.CreateContext(await source.ReadAsync(Http));
+                compiled[rules] = context;
+            }
+
+            session = Session.Open(context, fragment.GetValueOrDefault("s"));
+            terminal = session.Terminal;
+            moves = terminal.IsTerminal ? null : session.ValidInputs();
+            projections = session.Context.Projections.Select(name => (name, session.Project(name))).ToList();
+        }
+        catch (Exception e)
+        {
+            session = null;
+            error = $"{e.GetType().Name}\n{e.Message}";
+        }
+
+        return true;
+    }
+
+    private async Task Play(ValidInput move, IReadOnlyDictionary<string, JsonNode?>? open)
+    {
+        if (session is null || source is null)
+        {
+            return;
+        }
+
+        string next;
+        try
+        {
+            Outcome outcome = session.Apply(move, open);
+            lastEvent = outcome.Draws.Length > 0
+                ? $"{move} → drew: {string.Join(", ", outcome.Draws)}"
+                : $"{move}";
+            next = FragmentFor(Session.PackData(outcome.Result.State));
+        }
+        catch (InputRejectedException e)
+        {
+            rejection = string.Join(" / ", e.Rejections.Select(r => $"{r.Parameter}: {r.Code}").Concat(e.Unexplained));
+            return;
+        }
+        catch (Exception e)
+        {
+            rejection = e.Message;
+            return;
+        }
+
+        await GoAsync(next);
+    }
+
+    private async Task Restart()
+    {
+        lastEvent = null;
+        await GoAsync(FragmentFor(null));
+    }
+
+    // Loaded here rather than on the event that follows, so the screen never waits on it.
+    private async Task GoAsync(string fragment)
+    {
+        await LoadAsync(fragment);
+        if (module is not null)
+        {
+            await module.InvokeVoidAsync("go", fragment);
+        }
+    }
+
+    private async Task CopyLink()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", BaseUri + "#" + loadedFragment);
+        copied = true;
+    }
+
+    private string FragmentFor(string? packedData) =>
+        Fragment.Build(("r", source!.Value), ("s", packedData));
+
+    private static string ArgumentLabel(ValidInput move)
+    {
+        if (move.Arguments.IsEmpty)
+        {
+            return move.IsComplete ? move.Input : "Submit";
+        }
+
+        return string.Join(", ", move.Arguments.Select(a => $"{a.Key}: {Unquote(a.Value)}"));
+    }
+
+    // Arguments arrive in their JSON form; a string reads better without its quotes.
+    private static string Unquote(string json) =>
+        json.Length >= 2 && json[0] == '"' && json[^1] == '"' ? JsonNode.Parse(json)!.GetValue<string>() : json;
+}
