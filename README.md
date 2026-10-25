@@ -1,17 +1,32 @@
 # Rulpane
 
-A web service that turns a [Rulealize](https://github.com/reny-develop/Rulealize) rule set carried in a URL into a screen you can operate. There is no server: it runs entirely on GitHub Pages static hosting.
+**Rules in a link, a screen you can play.** Rulpane turns a [Rulealize](https://github.com/reny-develop/Rulealize) rule set carried in a URL into a screen: what it shows, the moves it allows, the result it ends on. The rules, the position and every move stay in the link, so a link is the whole screen — send it, and whoever opens it is where you are. There is no server: everything runs in the browser, from GitHub Pages.
 
-```
-https://<user>.github.io/Rulpane/#r=approval
-https://<user>.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE
-https://<user>.github.io/Rulpane/#r=approval&v=approval
-https://<user>.github.io/Rulpane/#r=reversi&v=reversi
-https://<user>.github.io/Rulpane/#r=approval&v=approval&t=paper
-https://<user>.github.io/Rulpane/#p=approval-stages
-https://<user>.github.io/Rulpane/#p=approval-stages&t=paper
-https://<user>.github.io/Rulpane/#r=Rulealize.RuleSet.SignedRequest@1.1.0
-```
+**Open it: <https://reny-develop.github.io/Rulpane/>**
+
+## Try it
+
+| Link | What it shows |
+| --- | --- |
+| [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | A bundled rule set with no view: the screen is made from the rules |
+| [`#r=approval&v=approval`](https://reny-develop.github.io/Rulpane/#r=approval&v=approval) | The same rules laid out by a view |
+| [`#r=approval&v=approval&t=paper`](https://reny-develop.github.io/Rulpane/#r=approval&v=approval&t=paper) | …and in another theme |
+| [`#r=approval&s=z:q1Yq…`](https://reny-develop.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE) | The same rules, starting from a position the link carries |
+| [`#r=reversi&v=reversi`](https://reny-develop.github.io/Rulpane/#r=reversi&v=reversi) | A board game for two, played square by square |
+| [`#p=approval-stages`](https://reny-develop.github.io/Rulpane/#p=approval-stages) | A paneset: rules, view and start as one name |
+| [`#p=approval-stages&t=paper`](https://reny-develop.github.io/Rulpane/#p=approval-stages&t=paper) | The paneset with one of its keys given over |
+| [`#r=Rulealize.RuleSet.SignedRequest@1.1.0`](https://reny-develop.github.io/Rulpane/#r=Rulealize.RuleSet.SignedRequest@1.1.0) | A rule set from the Rulealize Registry, at one exact version |
+
+The start page lists every bundled rule set, paneset and Registry rule set, and **makes a link from your own rules**: paste a rule set, and a view and a theme if you have them; they are checked there first, so the link it hands out is one that opens.
+
+## Where the pieces come from
+
+| Piece | Written by | Published to |
+| --- | --- | --- |
+| Rule set | Anybody, in [Rulealize](https://github.com/reny-develop/Rulealize)'s JSON | The [Rulealize Registry](https://github.com/reny-develop/Rulealize.Registry), or carried in the link |
+| [View](#views), [theme](#themes), [paneset](#panesets) | Anybody, in the formats below | [Rulpane.Gallery](https://github.com/reny-develop/Rulpane.Gallery), or carried in the link |
+
+Rulpane also bundles a few of each, named by a lowercase name. Everything below the top bar is what the link asked for; [who made it](#who-made-the-screen) is always said in the bar.
 
 ## The URL
 
@@ -180,11 +195,11 @@ The bundled panesets are `request-stages`, `approval-stages`, `checklist-progres
 Anybody can publish a view, a theme or a paneset to [Rulpane.Gallery](https://github.com/reny-develop/Rulpane.Gallery), where it is recorded once a machine has read it with this repository's own [`Rulpane.Engine`](src/Rulpane.Engine/) and run it — and nobody reviews it. A link names one as `<owner>/<name>@<version>`: the GitHub account that published it, a name, and the release the Gallery numbered, which a link never moves off. A name is one kind for good, so `octocat/kanban@1` given in `t` when it is a view is refused rather than read as something else.
 
 ```
-https://<user>.github.io/Rulpane/#r=Rulealize.RuleSet.Request@1.1.0&v=octocat/kanban@1
-https://<user>.github.io/Rulpane/#p=octocat/othello@1&t=paper
+https://reny-develop.github.io/Rulpane/#r=Rulealize.RuleSet.Request@1.1.0&v=octocat/kanban@1
+https://reny-develop.github.io/Rulpane/#p=octocat/othello@1&t=paper
 ```
 
-As with the Registry, the viewer fetches nothing from outside its own origin: every deploy copies the Gallery's releases out of a checkout of it to `gallery/` beside the viewer, leaving out any it withholds — and a paneset that names one of those stops opening with it.
+(`octocat/…` names show the form; they are not releases.) As with the Registry, the viewer fetches nothing from outside its own origin: every deploy copies the Gallery's releases out of a checkout of it to `gallery/` beside the viewer, leaving out any it withholds — and a paneset that names one of those stops opening with it.
 
 ```sh
 dotnet run --project tool/Mirror -- --gallery src/Rulpane.Viewer/wwwroot/gallery [<gallery checkout>]   # ../Rulpane.Gallery by default; ignored by git
@@ -220,25 +235,46 @@ A theme is checked when the link is opened. Every pair of colours the screen set
 
 When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." A paneset counts as the link when the link carries it; a part a paneset from the Gallery writes in place is its author's. When nothing came in the link but the rules are from the Registry or something is from the Gallery, it says "Published by others, not by Rulpane." in place of the first sentence. The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, which rule sets from the Registry it runs, which releases from the Gallery it is made with and which GitHub account published each, what a link can do, what to watch for, and the documents themselves, the ones the rules hold included.
 
+## What a link cannot do
+
+A screen anybody can lay out could be made to pass for something else. What keeps a link to what Rulpane is for:
+
+- **No code from a link.** A link carries documents — rules, a view, a theme, a position — never HTML or script; a view's text is shown as text. The rules run on the plugins Rulpane lists itself (see [Plugins](#plugins)), never one a link names.
+- **Nothing from elsewhere.** The page's Content-Security-Policy lets it load and fetch only from its own origin: no outside script, image, font or request, and no form that submits anywhere. What comes from the Registry and the Gallery is copied beside the viewer at each deploy.
+- **No password fields, and a bar a link cannot draw.** The top bar always says who made the screen, and its detail says that Rulpane never asks for passwords, payment or personal details.
+- **A bounded amount of work.** The moves listed at a position and the outcomes of a draw are capped (`Session.ValidationLimit`, `Session.OutcomeLimit`), so rules written to hang the browser stop at the cap.
+
+A release in the Gallery that misleads can be reported there, with an issue, and is withheld: it stops opening at Rulpane's next deploy. A link that carries everything in itself cannot be withdrawn by anybody, which is why the bar says whose it is.
+
 ## Language
 
 Rulpane's own words — the bar and its detail, the title row, the moves and the start page — are in Japanese when the browser's first language is Japanese, and in English otherwise. In Japanese the bar says 「Rulpane ではなく、リンクの作者が作ったものです。Rulpane はパスワードや支払いを求めません。」, or 「他の人が公開したもの」 for rules from the Registry. What a link carries stays in the one language its author wrote it in (see [Names](#names)), and a document refused when the link opens is refused in English, since the message names the document's own keys.
 
 ## Plugins
 
-A rule set in a URL can use only the plugins listed in [`CuratedRuntime`](src/Rulpane.Engine/CuratedRuntime.cs). Plugins are never loaded from a URL.
+Rules run on Rulealize 0.14.0 and the 17 plugins listed in [`CuratedRuntime`](src/Rulpane.Engine/CuratedRuntime.cs): [Arithmetic](https://www.nuget.org/packages/Rulealize.Plugin.Arithmetic), [Binding](https://www.nuget.org/packages/Rulealize.Plugin.Binding), [Branch](https://www.nuget.org/packages/Rulealize.Plugin.Branch), [Chance](https://www.nuget.org/packages/Rulealize.Plugin.Chance), [Comparison](https://www.nuget.org/packages/Rulealize.Plugin.Comparison), [Deck](https://www.nuget.org/packages/Rulealize.Plugin.Deck), [Definition](https://www.nuget.org/packages/Rulealize.Plugin.Definition), [Graph](https://www.nuget.org/packages/Rulealize.Plugin.Graph), [Grid](https://www.nuget.org/packages/Rulealize.Plugin.Grid), [Logic](https://www.nuget.org/packages/Rulealize.Plugin.Logic), [Record](https://www.nuget.org/packages/Rulealize.Plugin.Record), [Secret](https://www.nuget.org/packages/Rulealize.Plugin.Secret), [Sequence](https://www.nuget.org/packages/Rulealize.Plugin.Sequence), [State](https://www.nuget.org/packages/Rulealize.Plugin.State), [Text](https://www.nuget.org/packages/Rulealize.Plugin.Text), [Tuple](https://www.nuget.org/packages/Rulealize.Plugin.Tuple), [TypeSchema](https://www.nuget.org/packages/Rulealize.Plugin.TypeSchema). A rule set in a URL can use only these, and plugins are never loaded from a URL.
 
 ## Development
+
+It takes the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```sh
 dotnet run --project src/Rulpane.Viewer --launch-profile http   # http://localhost:5080
 ```
 
-What runs a link, apart from how it is drawn — the curated runtime, the sources a fragment names, and the readers of views and themes — is the library [`src/Rulpane.Engine`](src/Rulpane.Engine/), so that the Gallery reads a submitted view, theme or paneset with the same code the viewer will run it with. The viewer (`src/Rulpane.Viewer`) is the Blazor app around it.
+To open rule sets from the Registry or releases from the Gallery locally, mirror them first with the two `tool/Mirror` commands shown under [Rule sets from the Registry](#rule-sets-from-the-registry) and [The Gallery](#the-gallery).
+
+| Folder | What it is |
+| --- | --- |
+| [`src/Rulpane.Engine`](src/Rulpane.Engine/) | What runs a link, apart from how it is drawn: the curated runtime, the sources a fragment names, the readers of views, themes and panesets. The Gallery reads a submission with this same library, so what it records is what the viewer opens |
+| [`src/Rulpane.Viewer`](src/Rulpane.Viewer/) | The Blazor WebAssembly app around it. `wwwroot/` holds the bundled rule sets, views, themes and panesets |
+| [`tool/Mirror`](tool/Mirror/) | Copies the Registry's rule sets and the Gallery's releases beside the viewer |
 
 A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
 
 A link stays openable across a breaking change to what a link holds: the commit before that change is tagged `site/v<n>`, and every deploy builds each such tag again, with the Registry and the Gallery mirrored again, at `/v<n>/` beside the current viewer at the root. There is no such tag yet.
+
+Issues and pull requests are welcome. A view, a theme or a paneset of your own does not need one: [submit it to the Gallery](https://github.com/reny-develop/Rulpane.Gallery#how-a-release-is-recorded).
 
 ## License
 
