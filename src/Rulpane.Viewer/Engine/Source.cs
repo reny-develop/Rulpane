@@ -2,12 +2,14 @@ using System.Text.RegularExpressions;
 
 namespace Rulpane.Viewer.Engine;
 
-/// <summary>Where a document named in the fragment comes from: the rules of <c>r=</c>, or the view of <c>v=</c>.</summary>
+/// <summary>Where a document named in the fragment comes from: the rules of <c>r=</c>, the view of <c>v=</c> or the theme of <c>t=</c>.</summary>
 public sealed partial record Source(string Value, bool IsBundled, string Folder)
 {
     public static Source Rules(string value) => Parse(value, "rulesets", "rule set");
 
     public static Source View(string value) => Parse(value, "views", "view");
+
+    public static Source Theme(string value) => Parse(value, "themes", "theme");
 
     /// <summary>A bare name is a document shipped with the viewer; <c>z:</c> is one carried in the link.</summary>
     private static Source Parse(string value, string folder, string noun)

@@ -7,6 +7,7 @@ https://<user>.github.io/Rulpane/#r=approval
 https://<user>.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE
 https://<user>.github.io/Rulpane/#r=approval&v=approval
 https://<user>.github.io/Rulpane/#r=reversi&v=reversi
+https://<user>.github.io/Rulpane/#r=approval&v=approval&t=paper
 ```
 
 ## The URL
@@ -17,6 +18,7 @@ Everything goes in the fragment (after `#`), which the browser never sends to a 
 | --- | --- |
 | `r` | The rule set. A lowercase name is one bundled with the viewer (`wwwroot/rulesets/<name>.json`); a value starting with `z:` is JSON, deflated and base64url-encoded |
 | `v` | The view: where each value goes on the screen. A lowercase name is one bundled with the viewer (`wwwroot/views/<name>.json`); `z:` is the JSON, packed as for `r`. Omitted, the screen is generated from the rule set |
+| `t` | The theme: how the screen under the bar looks. A lowercase name is one bundled with the viewer (`wwwroot/themes/<name>.json`); `z:` is the JSON, packed as for `r`. Omitted, the screen looks like Rulpane |
 | `s` | The state: only the `data` of the state document, in the `z:` form. Omitted, the rule set starts from its initial state |
 
 The URL is rewritten on every move, so the browser's Back button is an undo, and sharing the URL hands over the position as it stands.
@@ -66,9 +68,35 @@ A binding is a projection then `.`-separated steps into it (`summary.stage`), or
 
 Every block, and every row of `fields`, takes `showWhen`, a binding: it is shown only while that reads `true`. The game's end and its result are shown above the layout whatever the view says.
 
+## Themes
+
+A theme (`rulealize/theme/v1`) sets the colours, corners, typeface and spacing of everything under the top bar. The bar keeps Rulpane's own look whatever the theme says, so nothing a link brings can pass for it.
+
+```jsonc
+{
+  "$schema": "rulealize/theme/v1",
+  "colors": {
+    "light": { "accent": "#1f7a4d", "accent-soft": "#e4f4ea" },  // optional, each colour optional
+    "dark":  { "accent": "#6fd6a0" }
+  },
+  "radius": "round",      // sharp, default or round
+  "font": "rounded",      // inter, system, serif or rounded
+  "density": "compact"    // comfortable or compact
+}
+```
+
+| Key | Value |
+| --- | --- |
+| `colors.light`, `colors.dark` | Any of `bg`, `surface`, `sunken`, `text`, `muted`, `line`, `line-strong`, `accent`, `accent-hover`, `accent-text`, `accent-soft`, `mark`, `mark-text`, `ok`, `ok-soft`, `danger`, `danger-soft`, `warn`, `warn-soft`, as `#rrggbb`. A colour left out, or a mode left out, keeps Rulpane's own |
+| `radius` | The corners: `sharp`, `default` or `round` |
+| `font` | The typeface for text: `inter` (bundled), or the device's own `system`, `serif` or `rounded` face. Code and values stay in JetBrains Mono. No other font can load: the page's CSP lets none in |
+| `density` | `comfortable`, or `compact` for less space between and inside cards |
+
+A theme is checked when the link is opened. Every pair of colours the screen sets text in — `text` on `bg`, `surface`, `sunken` and `accent-soft`; `muted` on `bg`, `surface` and `sunken`; `accent-text` on `accent` and `accent-hover`; `accent` on `bg`, `surface` and `accent-soft`; `mark-text` on `mark`; and `ok`, `danger` and `warn` each on `surface` and on its `-soft` — must reach a contrast of 4.5:1 (WCAG AA), counting the colours the theme leaves to Rulpane. A theme that falls short is refused with the pair that did.
+
 ## Who made the screen
 
-When the rules or the view came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, what a link can do, what to watch for, and the documents themselves.
+When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, what a link can do, what to watch for, and the documents themselves.
 
 ## Plugins
 

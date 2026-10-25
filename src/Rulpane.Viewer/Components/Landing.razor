@@ -38,8 +38,8 @@
             @foreach (Sample sample in Samples)
             {
                 <li>
-                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View)))">
-                        <span class="sample-head">@sample.Name@(sample.View is null ? null : " + view")<Icon Name="arrow" /></span>
+                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View), ("t", sample.Theme)))">
+                        <span class="sample-head">@sample.Name@(sample.View is null ? null : " + view")@(sample.Theme is null ? null : " + theme")<Icon Name="arrow" /></span>
                         <p>@sample.Description</p>
                         <span class="tags">
                             @foreach (string tag in sample.Tags)
@@ -56,13 +56,15 @@
     <section class="section">
         <div class="section-head">
             <h2>Make a link from your own rules</h2>
-            <p>Paste a rule set, and a view if you have one. Both are checked here first, so a link this page hands out is one that opens.</p>
+            <p>Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens.</p>
         </div>
         <div class="card make">
             <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
                       placeholder="Paste the rule set JSON. Comments are dropped from the link."></textarea>
             <textarea class="view-editor" @bind="viewDocument" @bind:event="oninput" rows="4" spellcheck="false"
                       placeholder="Optional: a view (rulealize/view/v1). Left empty, the screen is made from the rules."></textarea>
+            <textarea class="view-editor" @bind="themeDocument" @bind:event="oninput" rows="4" spellcheck="false"
+                      placeholder="Optional: a theme (rulealize/theme/v1). Left empty, the screen looks like Rulpane."></textarea>
             <div class="make-row">
                 <button class="primary" @onclick="Make"><Icon Name="link" />Make link</button>
                 @if (link is not null)
@@ -79,9 +81,9 @@
 </div>
 
 @code {
-    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null);
+    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null);
 
-    // Each describes the document of the same name in wwwroot/rulesets, and its view the one in wwwroot/views.
+    // Each describes the document of the same name in wwwroot/rulesets, its view the one in wwwroot/views, and its theme the one in wwwroot/themes.
     private static readonly Sample[] Samples =
     [
         new("approval", "Draft, review, then approve or reject with a reason.", ["3 inputs", "projection"]),
@@ -93,6 +95,8 @@
         new("countdown", "The total set large; the moves under it.", ["view", "stats"], View: "countdown"),
         new("roster", "Who is on which shift, as tables, with a block of moves for each input.", ["view", "table"], View: "roster"),
         new("reversi", "The board drawn square by square: choose a square to place there.", ["view", "board"], View: "reversi"),
+        new("approval", "The claim again, on paper: warm colours, a serif, square corners.", ["theme"], View: "approval", Theme: "paper"),
+        new("roster", "The roster, rounder and closer together, in green.", ["theme", "compact"], View: "roster", Theme: "meadow"),
     ];
 
     // approval, submitted and waiting for review.
@@ -108,6 +112,7 @@
     private bool focused;
     private string document = "";
     private string viewDocument = "";
+    private string themeDocument = "";
     private string? problem;
     private string? link;
     private string? id;
@@ -140,8 +145,15 @@
                 view = Fragment.Pack(Minify(viewDocument));
             }
 
+            string? theme = null;
+            if (!string.IsNullOrWhiteSpace(themeDocument))
+            {
+                Theme.Parse(themeDocument);
+                theme = Fragment.Pack(Minify(themeDocument));
+            }
+
             id = context.RuleSet;
-            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))), ("v", view));
+            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))), ("v", view), ("t", theme));
         }
         catch (Exception e)
         {

@@ -1,0 +1,21 @@
+{
+  "$schema": "rulealize/theme/v1",
+  "colors": {
+    "light": {
+      "bg": "#f4efe4", "surface": "#fffdf8", "sunken": "#ebe4d6",
+      "text": "#2a2218", "muted": "#6b5f4f", "line": "#e0d6c3", "line-strong": "#c4b79f",
+      "accent": "#8a3b12", "accent-hover": "#6f2f0e", "accent-text": "#fffdf8", "accent-soft": "#f5e3d6",
+      "mark": "#f2d675", "mark-text": "#3a2c00",
+      "ok": "#2f6b3a", "ok-soft": "#e3efdc", "danger": "#a8321f", "danger-soft": "#f7e1da"
+    },
+    "dark": {
+      "bg": "#1b1814", "surface": "#24201a", "sunken": "#2e2921",
+      "text": "#efe8dc", "muted": "#b0a594", "line": "#3a342a", "line-strong": "#544b3d",
+      "accent": "#e3a27a", "accent-hover": "#efb994", "accent-text": "#24160c", "accent-soft": "#3d2a1d",
+      "mark": "#e8c95a", "mark-text": "#2a2000",
+      "ok": "#8fcf98", "ok-soft": "#1f3322", "danger": "#f0907c", "danger-soft": "#3d211b"
+    }
+  },
+  "radius": "sharp",
+  "font": "serif"
+}

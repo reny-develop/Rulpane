@@ -1,0 +1,18 @@
+{
+  "$schema": "rulealize/theme/v1",
+  "colors": {
+    "light": {
+      "bg": "#eef4ef", "surface": "#ffffff", "sunken": "#e2ece4",
+      "text": "#142019", "muted": "#4f6157", "line": "#d3e0d6", "line-strong": "#aec2b3",
+      "accent": "#1f7a4d", "accent-hover": "#17603c", "accent-text": "#ffffff", "accent-soft": "#e4f4ea"
+    },
+    "dark": {
+      "bg": "#0f1512", "surface": "#17201b", "sunken": "#1f2a24",
+      "text": "#e6efe9", "muted": "#98aaa0", "line": "#29362f", "line-strong": "#3e4f45",
+      "accent": "#6fd6a0", "accent-hover": "#8fe2b6", "accent-text": "#0b1f14", "accent-soft": "#173526"
+    }
+  },
+  "radius": "round",
+  "font": "rounded",
+  "density": "compact"
+}

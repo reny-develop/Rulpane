@@ -5,7 +5,7 @@ namespace Rulpane.Viewer.Engine;
 
 /// <summary>
 /// Everything a screen is made from travels in the URL fragment, which the browser never sends
-/// to a server: <c>#r=&lt;rules&gt;&amp;v=&lt;view&gt;&amp;s=&lt;state&gt;</c>.
+/// to a server: <c>#r=&lt;rules&gt;&amp;v=&lt;view&gt;&amp;t=&lt;theme&gt;&amp;s=&lt;state&gt;</c>.
 /// </summary>
 public static class Fragment
 {

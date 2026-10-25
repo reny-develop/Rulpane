@@ -309,7 +309,7 @@ button:focus-visible, .button:focus-visible, input:focus-visible, textarea:focus
     gap: 10px;
     padding: 9px 14px;
     border: 1px solid var(--color-line);
-    border-radius: 10px;
+    border-radius: calc(var(--radius-md) + 2px);
     background: var(--color-surface);
     font: 500 13px var(--font-mono);
     min-width: 0;
@@ -345,7 +345,7 @@ button:focus-visible, .button:focus-visible, input:focus-visible, textarea:focus
     gap: 14px;
     width: 100%;
     padding: 14px;
-    border-radius: 10px;
+    border-radius: calc(var(--radius-md) + 2px);
     background: var(--color-sunken);
 }
 .field { display: flex; flex-direction: column; gap: 6px; }
@@ -437,6 +437,20 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .piece.warn { background: var(--color-warn); }
 .piece.danger { background: var(--color-danger); }
 .board-rejection { margin-top: 12px; }
+
+/* A theme's compact density: the same screen with less air in it. */
+main.compact { padding-top: 20px; }
+.compact .play, .compact .view, .compact .layout { gap: 12px; }
+.compact .card-head { padding: 9px 14px; }
+.compact .card-body, .compact .moves-body { padding: 12px 14px 14px; gap: 12px; }
+.compact .rows { padding: 2px 0; }
+.compact .rows > div { padding: 7px 14px; }
+.compact .table th, .compact .table td { padding: 7px 14px; }
+.compact .stat { padding: 10px 14px; }
+.compact .last-move { padding: 6px 12px; }
+.compact .board-card { padding: 12px 14px 14px; }
+.compact .board-card .card-head { margin: -12px -14px 12px; }
+.compact .result { padding: 16px; gap: 10px; }
 
 /*
  * Wide: the pinned block dissolves into the grid. Head and last move span both
