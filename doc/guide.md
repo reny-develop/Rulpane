@@ -180,6 +180,30 @@ A short one as a link, naming bundled parts (spaces would be `%20`; this one has
 https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":"approval","v":"approval","t":"paper"}
 ```
 
+## The forms used most
+
+Every key below is exact; see [Operations](#operations) for the rest. Keys differ between
+operations that look alike — `logic.and` takes `all`, `logic.or` takes `any`, `math.add` takes
+`of` — so copy them from here rather than guessing.
+
+```jsonc
+{ "op": "cmp.eq", "left": "$stage", "right": "draft" }            // also cmp.ne, cmp.lt, cmp.lte, cmp.gt, cmp.gte
+{ "op": "logic.and", "all": [ <expr>, <expr> ] }
+{ "op": "logic.or", "any": [ <expr>, <expr> ] }
+{ "op": "logic.not", "value": <expr> }
+{ "op": "branch.if", "cond": <expr>, "then": <expr>, "else": <expr> }
+{ "op": "math.add", "of": [ "$n", 1 ] }                            // math.sub takes left and right
+{ "op": "seq.of", "of": [ "a", "b" ] }                             // a list, where an expression goes
+{ "op": "seq.where", "source": "$items", "as": "i", "predicate": <expr reading "@i"> }
+{ "op": "seq.select", "source": "$items", "as": "i", "select": <expr reading "@i"> }
+{ "op": "seq.any", "source": "$items", "as": "i", "predicate": <expr reading "@i"> }
+{ "op": "seq.count", "source": "$items", "as": "i", "where": <expr reading "@i"> }
+{ "op": "seq.concat", "of": [ "$items", { "op": "seq.of", "of": [ { "id": "@id" } ] } ] }
+{ "op": "rec.at", "record": "@i", "key": "status" }
+{ "op": "rec.with", "record": "@i", "key": "status", "value": "done" }
+{ "op": "state.set", "path": "stage", "value": "review" }           // an effect
+```
+
 ## Rules
 
 The rules are a [Rulealize](https://github.com/reny-develop/Rulealize) rule set: a JSON

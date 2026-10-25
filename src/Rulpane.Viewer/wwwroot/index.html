@@ -204,6 +204,26 @@ steps of this one instance are not in the rules (they usually should not be: see
 <p>A short one as a link, naming bundled parts (spaces would be <code>%20</code>; this one has none):</p>
 <pre><code class="language-text">https://reny-develop.github.io/Rulpane/#p={&quot;$schema&quot;:&quot;rulpane/paneset/v1&quot;,&quot;r&quot;:&quot;approval&quot;,&quot;v&quot;:&quot;approval&quot;,&quot;t&quot;:&quot;paper&quot;}
 </code></pre>
+<h2 id="the-forms-used-most">The forms used most</h2>
+<p>Every key below is exact; see <a href="#operations">Operations</a> for the rest. Keys differ between
+operations that look alike — <code>logic.and</code> takes <code>all</code>, <code>logic.or</code> takes <code>any</code>, <code>math.add</code> takes
+<code>of</code> — so copy them from here rather than guessing.</p>
+<pre><code class="language-jsonc">{ &quot;op&quot;: &quot;cmp.eq&quot;, &quot;left&quot;: &quot;$stage&quot;, &quot;right&quot;: &quot;draft&quot; }            // also cmp.ne, cmp.lt, cmp.lte, cmp.gt, cmp.gte
+{ &quot;op&quot;: &quot;logic.and&quot;, &quot;all&quot;: [ &lt;expr&gt;, &lt;expr&gt; ] }
+{ &quot;op&quot;: &quot;logic.or&quot;, &quot;any&quot;: [ &lt;expr&gt;, &lt;expr&gt; ] }
+{ &quot;op&quot;: &quot;logic.not&quot;, &quot;value&quot;: &lt;expr&gt; }
+{ &quot;op&quot;: &quot;branch.if&quot;, &quot;cond&quot;: &lt;expr&gt;, &quot;then&quot;: &lt;expr&gt;, &quot;else&quot;: &lt;expr&gt; }
+{ &quot;op&quot;: &quot;math.add&quot;, &quot;of&quot;: [ &quot;$n&quot;, 1 ] }                            // math.sub takes left and right
+{ &quot;op&quot;: &quot;seq.of&quot;, &quot;of&quot;: [ &quot;a&quot;, &quot;b&quot; ] }                             // a list, where an expression goes
+{ &quot;op&quot;: &quot;seq.where&quot;, &quot;source&quot;: &quot;$items&quot;, &quot;as&quot;: &quot;i&quot;, &quot;predicate&quot;: &lt;expr reading &quot;@i&quot;&gt; }
+{ &quot;op&quot;: &quot;seq.select&quot;, &quot;source&quot;: &quot;$items&quot;, &quot;as&quot;: &quot;i&quot;, &quot;select&quot;: &lt;expr reading &quot;@i&quot;&gt; }
+{ &quot;op&quot;: &quot;seq.any&quot;, &quot;source&quot;: &quot;$items&quot;, &quot;as&quot;: &quot;i&quot;, &quot;predicate&quot;: &lt;expr reading &quot;@i&quot;&gt; }
+{ &quot;op&quot;: &quot;seq.count&quot;, &quot;source&quot;: &quot;$items&quot;, &quot;as&quot;: &quot;i&quot;, &quot;where&quot;: &lt;expr reading &quot;@i&quot;&gt; }
+{ &quot;op&quot;: &quot;seq.concat&quot;, &quot;of&quot;: [ &quot;$items&quot;, { &quot;op&quot;: &quot;seq.of&quot;, &quot;of&quot;: [ { &quot;id&quot;: &quot;@id&quot; } ] } ] }
+{ &quot;op&quot;: &quot;rec.at&quot;, &quot;record&quot;: &quot;@i&quot;, &quot;key&quot;: &quot;status&quot; }
+{ &quot;op&quot;: &quot;rec.with&quot;, &quot;record&quot;: &quot;@i&quot;, &quot;key&quot;: &quot;status&quot;, &quot;value&quot;: &quot;done&quot; }
+{ &quot;op&quot;: &quot;state.set&quot;, &quot;path&quot;: &quot;stage&quot;, &quot;value&quot;: &quot;review&quot; }           // an effect
+</code></pre>
 <h2 id="rules">Rules</h2>
 <p>The rules are a <a href="https://github.com/reny-develop/Rulealize">Rulealize</a> rule set: a JSON
 document that says what a position looks like, what may be done to one, and when there is
