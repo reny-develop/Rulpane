@@ -1,0 +1,6 @@
+{
+  "$schema": "rulpane/paneset/v1",
+  // A week's shift roster: put staff on the shifts still open, within what each can work.
+  "r": "roster",
+  "v": "roster"
+}
