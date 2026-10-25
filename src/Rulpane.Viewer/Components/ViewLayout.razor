@@ -1,0 +1,144 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Rulealize
+@* A screen laid out by a view document. Everything shown is read through a binding; nothing here decides anything. *@
+
+<div class="layout">
+    @foreach (Block block in View.Layout.Where(Shown))
+    {
+        @switch (block)
+        {
+            case Heading heading:
+                <h2 class="layout-heading">@heading.Text</h2>
+                break;
+            case Paragraph paragraph:
+                <p class="layout-text">@paragraph.Body</p>
+                break;
+            case Fields fields:
+                <section class="card">
+                    @if (fields.Title is not null)
+                    {
+                        <div class="card-head"><h2>@fields.Title</h2></div>
+                    }
+                    <dl class="rows labelled">
+                        @foreach (Row row in fields.Rows.Where(r => r.ShowWhen is null || IsTrue(r.ShowWhen)))
+                        {
+                            JsonNode? value = Read(row.Bind);
+                            <div>
+                                <dt>@row.Label</dt>
+                                <dd>
+                                    @if (row.Tones is not null && value is JsonValue)
+                                    {
+                                        string text = Display.Unquote(value.ToJsonString());
+                                        <span class="chip dot mono @ToneClass(row.Tones.GetValueOrDefault(text))">@text</span>
+                                    }
+                                    else
+                                    {
+                                        <ValueView Value="value" />
+                                    }
+                                </dd>
+                            </div>
+                        }
+                    </dl>
+                </section>
+                break;
+            case Stats stats:
+                <div class="stats">
+                    @foreach (Stat stat in stats.Items)
+                    {
+                        <div class="card stat">
+                            <span class="stat-label">@stat.Label</span>
+                            <span class="stat-value">@Scalar(Read(stat.Bind))</span>
+                        </div>
+                    }
+                </div>
+                break;
+            case Table table:
+                <section class="card">
+                    @if (table.Title is not null)
+                    {
+                        <div class="card-head"><h2>@table.Title</h2></div>
+                    }
+                    @if (Read(table.Bind) is JsonArray { Count: > 0 } items)
+                    {
+                        IReadOnlyList<Column> columns = table.Columns ?? KeysOf(items);
+                        <div class="table-scroll">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        @foreach (Column column in columns)
+                                        {
+                                            <th>@column.Label</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (JsonNode? item in items)
+                                    {
+                                        <tr>
+                                            @foreach (Column column in columns)
+                                            {
+                                                <td><ValueView Value="@(item is JsonObject record ? record[column.Key] : null)" /></td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="card-body muted">Nothing to list.</p>
+                    }
+                </section>
+                break;
+            @* Moves of named inputs that none of are available now leave nothing to show; "*" always says so. *@
+            case Actions actions when Moves is not null && (actions.Inputs is null || Offered(actions).Count > 0):
+                <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? "Moves")" Side="false"
+                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="@Rejection" />
+                break;
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public View View { get; set; } = default!;
+
+    /// <summary>Every projection by name, already answered for this position.</summary>
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, JsonNode?> Projections { get; set; } = default!;
+
+    /// <summary>The state's <c>data</c>, which a <c>$</c> binding reads.</summary>
+    [Parameter] public JsonNode? Data { get; set; }
+
+    /// <summary>The moves the rules allow; null once they have ended, when no actions block is shown.</summary>
+    [Parameter] public IReadOnlyCollection<ValidInput>? Moves { get; set; }
+    [Parameter] public bool Truncated { get; set; }
+
+    [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?>? Open)> OnPlay { get; set; }
+    [Parameter] public ValidInput? Refused { get; set; }
+    [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
+    [Parameter] public string? Rejection { get; set; }
+
+    private JsonNode? Read(Binding binding) => binding.Read(name => Projections.GetValueOrDefault(name), Data);
+
+    // Only a true value shows a block: the rules say when, so anything that is not a plain yes is a no.
+    private bool IsTrue(Binding binding) => Read(binding) is JsonValue v && v.GetValueKind() == JsonValueKind.True;
+
+    private bool Shown(Block block) => block.ShowWhen is null || IsTrue(block.ShowWhen);
+
+    private List<ValidInput> Offered(Actions actions) =>
+        Moves!.Where(m => actions.Inputs is null || actions.Inputs.Contains(m.Input)).ToList();
+
+    private static string? ToneClass(Tone tone) => tone == Tone.neutral ? null : tone.ToString();
+
+    private static string Scalar(JsonNode? node) => node switch
+    {
+        null => "—",
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => v.GetValue<string>(),
+        _ => node.ToJsonString(),
+    };
+
+    // A table with no columns named shows every key, in the order they first appear.
+    private static List<Column> KeysOf(JsonArray items) =>
+        items.OfType<JsonObject>().SelectMany(r => r.Select(p => p.Key)).Distinct().Select(k => new Column(k, k)).ToList();
+}

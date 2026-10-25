@@ -1,0 +1,17 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "roster@1",
+  "title": "This week's roster",
+  "layout": [
+    { "c": "table", "title": "Assigned", "bind": "$assigned",
+      "columns": [ { "key": "shift", "label": "Shift" }, { "key": "who", "label": "Who" } ] },
+    { "c": "actions", "title": "Put someone on a shift", "inputs": ["assign"] },
+    { "c": "actions", "title": "Take someone off", "inputs": ["release"] },
+    { "c": "heading", "text": "The week" },
+    { "c": "table", "title": "Staff", "bind": "$staff",
+      "columns": [ { "key": "name", "label": "Name" }, { "key": "capacity", "label": "Shifts at most" }, { "key": "senior", "label": "Senior" } ] },
+    { "c": "table", "title": "Shifts", "bind": "$shifts",
+      "columns": [ { "key": "id", "label": "Shift" }, { "key": "day", "label": "Day" }, { "key": "senior", "label": "Needs a senior" } ] },
+    { "c": "table", "title": "Recently", "bind": "$log" }
+  ]
+}

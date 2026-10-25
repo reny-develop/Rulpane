@@ -1,0 +1,97 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@*
+    Who made the screen, said in the bar on every screen that came in a link. The sentence is
+    always there, so nobody has to open anything to learn it; the button only adds the detail.
+*@
+
+<div class="provenance">
+    <button class="provenance-button @(open ? "open" : null)" @onclick="Toggle" aria-expanded="@open" aria-controls="provenance-details">
+        <Icon Name="shield" Size="14" />
+        <span class="long">Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment.</span>
+        @* Two lines set by hand, so the button is only as wide as the longer of them. *@
+        <span class="short"><span>Made by the link's author, not Rulpane.</span><span>Rulpane never asks for passwords.</span></span>
+        <Icon Name="info" Size="14" />
+    </button>
+
+    @if (open)
+    {
+        <div class="provenance-scrim" @onclick="Close"></div>
+        <section id="provenance-details" class="provenance-details" role="dialog" aria-labelledby="provenance-title">
+            <span class="grabber" aria-hidden="true"></span>
+            <div class="details-head">
+                <span class="badge"><Icon Name="shield" Size="16" /></span>
+                <h2 id="provenance-title">About this screen</h2>
+            </div>
+            <div class="details-section">
+                <h3>Who made it</h3>
+                <p>Whoever made this link. The rules and the layout travel inside the link itself, and Rulpane runs them without checking who wrote them.</p>
+            </div>
+            <div class="details-section">
+                <h3>What Rulpane makes sure of</h3>
+                <p>A link can only lay out the rules' values and moves.</p>
+            </div>
+            <div class="details-section watch">
+                <h3>What to watch for</h3>
+                <p>Rulpane never asks for passwords, payment or personal details. If this screen does, close it.</p>
+                <p>Names, logos and wording on the screen are typed by the link's author. Anyone can type them.</p>
+            </div>
+            @if (showing)
+            {
+                @foreach (var (name, text) in Documents)
+                {
+                    <div class="details-document">
+                        <h3>@name</h3>
+                        <pre>@Indent(text)</pre>
+                    </div>
+                }
+            }
+            <div class="details-actions">
+                <button @onclick="() => showing = !showing">@(showing ? "Hide the rules" : "View the rules")</button>
+                <button class="primary" @onclick="Close">Got it</button>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    /// <summary>The documents the screen is made from, by what they are, as they arrived.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<(string Name, string Text)> Documents { get; set; } = default!;
+
+    private bool open;
+    private bool showing;
+
+    private void Toggle()
+    {
+        open = !open;
+        showing = false;
+    }
+
+    private void Close()
+    {
+        open = false;
+        showing = false;
+    }
+
+    // A document from a link is minified; indented, a person can read it. Comments are not kept.
+    private static string Indent(string text)
+    {
+        try
+        {
+            return JsonNode.Parse(text, documentOptions: new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            })!.ToJsonString(new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                // Shown as text, never as markup, so the author's own characters can stay as typed.
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            });
+        }
+        catch (JsonException)
+        {
+            return text;
+        }
+    }
+}

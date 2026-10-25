@@ -16,7 +16,12 @@
         </svg>
         Rulpane
     </a>
-    @if (session is not null)
+    @if (session is not null && Unverified)
+    {
+        @* In the bar, which only Rulpane draws, so nothing a link lays out can cover it or imitate it. *@
+        <Provenance Documents="Carried" />
+    }
+    else if (session is not null)
     {
         <span class="crumb">@Id</span>
     }
@@ -37,7 +42,7 @@
         <section class="card failure">
             <span class="failure-icon"><Icon Name="alert" Size="20" /></span>
             <h1>This link cannot be opened</h1>
-            <p>Rulpane could not read the rules it names. Nothing was run.</p>
+            <p>Rulpane could not read the rules or the view it names. Nothing was run.</p>
             <pre><strong>@error.Value.Type</strong>@error.Value.Message</pre>
             <div class="actions">
                 <a class="button primary" href="@BaseUri"><Icon Name="back" />Back to the start</a>
@@ -51,13 +56,13 @@
     }
     else
     {
-        <div class="play">
+        <div class="play @(view is null ? null : "laid-out")">
             @* Pinned on a narrow screen, so the moves never scroll away under a long view. *@
             <div class="pinned">
                 <header class="play-head">
                     <div class="titles">
                         <div class="title-row">
-                            <h1>@Id</h1>
+                            <h1>@(view?.Title ?? Id)</h1>
                             @if (terminal.IsTerminal)
                             {
                                 <span class="chip ok dot">Finished</span>
@@ -67,18 +72,13 @@
                                 <span class="chip accent dot">In progress</span>
                             }
                         </div>
-                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? "bundled" : "embedded in the link")</span>
+                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? "bundled" : "embedded in the link")@(viewSource is null ? null : viewSource.IsBundled ? $" · view {viewSource.Value}" : " · view embedded in the link")</span>
                     </div>
                     <div class="actions">
                         <button @onclick="Restart" title="Start over"><Icon Name="restart" /><span class="label">Start over</span></button>
                         <button @onclick="CopyLink" title="Copy link"><Icon Name="@(copied ? "check" : "link")" /><span class="label">@(copied ? "Copied" : "Copy link")</span></button>
                     </div>
                 </header>
-
-                @if (source is { IsBundled: false })
-                {
-                    <p class="notice"><Icon Name="shield" />These rules came in the link. Nobody has verified who wrote them.</p>
-                }
 
                 @if (lastMove is not null)
                 {
@@ -104,14 +104,19 @@
                         <p>No moves are left. Share the link to hand over the finished position.</p>
                     </section>
                 }
-                else if (moves is not null)
+                else if (moves is not null && view is null)
                 {
-                    <MovePanel Moves="moves" OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
+                    <MovePanel Moves="moves" Truncated="truncated" OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
                 }
             </div>
 
             <div class="view">
-                @if (projections.Count > 0)
+                @if (view is not null)
+                {
+                    <ViewLayout View="view" Projections="projections" Data="session.Data" Moves="moves" Truncated="truncated"
+                                OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
+                }
+                else if (projections.Count > 0)
                 {
                     @foreach (var (name, value) in projections)
                     {
@@ -141,6 +146,8 @@
 
     // Compiling is the expensive part, and a rule set does not change while its state does.
     private readonly Dictionary<string, RuleContext> compiled = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Rules, string View), View> views = [];
+    private readonly Dictionary<Source, string> texts = [];
 
     private bool loading = true;
     private (string Type, string Message)? error;
@@ -150,16 +157,26 @@
     private IReadOnlyDictionary<string, string[]>? refusals;
     private string? rejection;
     private bool copied;
-    private RuleSource? source;
+    private Source? source;
+    private Source? viewSource;
+    private View? view;
     private Session? session;
     private TerminalStatus terminal;
-    private ValidInputSet? moves;
-    private List<(string Name, JsonNode? Value)> projections = [];
+    private List<ValidInput>? moves;
+    private bool truncated;
+    private Dictionary<string, JsonNode?> projections = [];
 
     private string BaseUri => Nav.BaseUri;
 
     // The rule set's id: the identity without the version the sub-title already gives.
-    private string Id => session!.Context.RuleSet.Split('@')[0];
+    private string Id => session!.Context.Id;
+
+    // Whether anything on screen arrived in the link rather than with the viewer.
+    private bool Unverified => source is { IsBundled: false } || viewSource is { IsBundled: false };
+
+    // The documents this screen is made from, as their author wrote them, for whoever wants to read them.
+    private List<(string Name, string Text)> Carried =>
+        [("Rules", texts[source!]), .. viewSource is null ? [] : new[] { ("View", texts[viewSource]) }];
 
     private IJSObjectReference? module;
     private IJSObjectReference? listener;
@@ -243,6 +260,8 @@
         ClearRejection();
         copied = false;
         session = null;
+        view = null;
+        viewSource = null;
 
         var fragment = Fragment.Parse(fragmentText);
         if (!fragment.TryGetValue("r", out string? rules))
@@ -253,21 +272,36 @@
 
         try
         {
-            source = RuleSource.Parse(rules);
+            source = Source.Rules(rules);
             if (!compiled.TryGetValue(rules, out RuleContext? context))
             {
-                context = Runtime.CreateContext(await source.ReadAsync(Http));
+                texts[source] = await source.ReadAsync(Http);
+                context = Runtime.CreateContext(texts[source]);
                 compiled[rules] = context;
+            }
+
+            if (fragment.TryGetValue("v", out string? layout))
+            {
+                viewSource = Source.View(layout);
+                if (!views.TryGetValue((rules, layout), out view))
+                {
+                    texts[viewSource] = await viewSource.ReadAsync(Http);
+                    view = View.Parse(texts[viewSource], context);
+                    views[(rules, layout)] = view;
+                }
             }
 
             session = Session.Open(context, fragment.GetValueOrDefault("s"));
             terminal = session.Terminal;
-            moves = terminal.IsTerminal ? null : session.ValidInputs();
-            projections = session.Context.Projections.Select(name => (name, session.Project(name))).ToList();
+            ValidInputSet? valid = terminal.IsTerminal ? null : session.ValidInputs();
+            moves = valid?.ToList();
+            truncated = valid?.Truncated ?? false;
+            projections = session.Context.Projections.ToDictionary(name => name, session.Project);
         }
         catch (Exception e)
         {
             session = null;
+            view = null;
             error = (e.GetType().Name, e.Message);
         }
 
@@ -361,5 +395,5 @@
     }
 
     private string FragmentFor(string? packedData) =>
-        Fragment.Build(("r", source!.Value), ("s", packedData));
+        Fragment.Build(("r", source!.Value), ("v", viewSource?.Value), ("s", packedData));
 }

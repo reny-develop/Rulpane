@@ -5,9 +5,9 @@
     rank its moves, so neither does the screen. Moves are grouped by whose they are, then by input.
 *@
 
-<section class="card side moves">
+<section class="card moves @(Side ? "side" : null)">
     <div class="card-head">
-        <h2>Moves</h2>
+        <h2>@Title</h2>
         <span class="meta">@Moves.Count available</span>
     </div>
     <div class="moves-body">
@@ -63,7 +63,7 @@
                 }
             </div>
         }
-        @if (Moves.Truncated)
+        @if (Truncated)
         {
             <p class="muted">Too many candidates: the list stops at @Session.ValidationLimit.</p>
         }
@@ -75,7 +75,16 @@
 </section>
 
 @code {
-    [Parameter, EditorRequired] public ValidInputSet Moves { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyCollection<ValidInput> Moves { get; set; } = default!;
+
+    /// <summary>Whether the search stopped at the limit, so <see cref="Moves"/> is not all of them.</summary>
+    [Parameter] public bool Truncated { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Moves";
+
+    /// <summary>Whether this is the column beside the view, which a wide screen keeps in sight.</summary>
+    [Parameter] public bool Side { get; set; } = true;
+
     /// <summary>A move chosen, with the values typed for its open parameters when it has any.</summary>
     [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?>? Open)> OnPlay { get; set; }
 

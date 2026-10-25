@@ -1,0 +1,19 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "approval@1",
+  "title": "Expense claim",
+  "layout": [
+    // `waiting` is the rules' own answer; the view only asks whether it is true.
+    { "c": "text", "text": "Submitted and waiting for a reviewer.", "showWhen": "summary.waiting" },
+    {
+      "c": "fields", "title": "Claim",
+      "rows": [
+        { "label": "Stage", "bind": "summary.stage",
+          "tone": { "review": "accent", "approved": "ok", "rejected": "danger" } },
+        { "label": "Reason", "bind": "summary.reason" }
+      ]
+    },
+    { "c": "actions", "title": "Submit", "inputs": ["submit"] },
+    { "c": "actions", "title": "Review", "inputs": ["approve", "reject"] }
+  ]
+}

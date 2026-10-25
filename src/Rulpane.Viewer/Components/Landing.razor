@@ -16,10 +16,12 @@
 
         <div class="card anatomy">
             <h2>The whole screen is in the link</h2>
-            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
+            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
             <dl>
                 <dt><span class="chip accent">r</span></dt>
                 <dd>The rule set: a bundled name, or the JSON itself, compressed</dd>
+                <dt><span class="chip warn">v</span></dt>
+                <dd>The view: where each value goes. Left out, the screen is made from the rules</dd>
                 <dt><span class="chip ok">s</span></dt>
                 <dd>The position. Left out, the rules start from the beginning</dd>
             </dl>
@@ -36,8 +38,8 @@
             @foreach (Sample sample in Samples)
             {
                 <li>
-                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name)))">
-                        <span class="sample-head">@sample.Name<Icon Name="arrow" /></span>
+                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View)))">
+                        <span class="sample-head">@sample.Name@(sample.View is null ? null : " + view")<Icon Name="arrow" /></span>
                         <p>@sample.Description</p>
                         <span class="tags">
                             @foreach (string tag in sample.Tags)
@@ -54,11 +56,13 @@
     <section class="section">
         <div class="section-head">
             <h2>Make a link from your own rules</h2>
-            <p>Paste a rule set. It is compiled here first, so a link this page hands out is one that opens.</p>
+            <p>Paste a rule set, and a view if you have one. Both are checked here first, so a link this page hands out is one that opens.</p>
         </div>
         <div class="card make">
             <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
                       placeholder="Paste the rule set JSON. Comments are dropped from the link."></textarea>
+            <textarea class="view-editor" @bind="viewDocument" @bind:event="oninput" rows="4" spellcheck="false"
+                      placeholder="Optional: a view (rulealize/view/v1). Left empty, the screen is made from the rules."></textarea>
             <div class="make-row">
                 <button class="primary" @onclick="Make"><Icon Name="link" />Make link</button>
                 @if (link is not null)
@@ -75,9 +79,9 @@
 </div>
 
 @code {
-    private sealed record Sample(string Name, string Description, string[] Tags);
+    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null);
 
-    // Each describes the document of the same name in wwwroot/rulesets.
+    // Each describes the document of the same name in wwwroot/rulesets, and its view the one in wwwroot/views.
     private static readonly Sample[] Samples =
     [
         new("approval", "Draft, review, then approve or reject with a reason.", ["3 inputs", "projection"]),
@@ -85,6 +89,9 @@
         new("reversi", "Reversi on an eight-by-eight board, for two.", ["grid", "actors"]),
         new("blackjack", "Cards are drawn in your browser, weighted by the rules.", ["chance", "actors"]),
         new("roster", "A shift roster: put staff on the shifts still open.", ["records"]),
+        new("approval", "The same rules, laid out by a view: a claim, its stage, the review.", ["view", "showWhen"], View: "approval"),
+        new("countdown", "The total set large; the moves under it.", ["view", "stats"], View: "countdown"),
+        new("roster", "Who is on which shift, as tables, with a block of moves for each input.", ["view", "table"], View: "roster"),
     ];
 
     // approval, submitted and waiting for review.
@@ -99,6 +106,7 @@
     private ElementReference editor;
     private bool focused;
     private string document = "";
+    private string viewDocument = "";
     private string? problem;
     private string? link;
     private string? id;
@@ -124,8 +132,15 @@
         try
         {
             RuleContext context = Runtime.CreateContext(document);
+            string? view = null;
+            if (!string.IsNullOrWhiteSpace(viewDocument))
+            {
+                View.Parse(viewDocument, context);
+                view = Fragment.Pack(Minify(viewDocument));
+            }
+
             id = context.RuleSet;
-            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))));
+            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))), ("v", view));
         }
         catch (Exception e)
         {
