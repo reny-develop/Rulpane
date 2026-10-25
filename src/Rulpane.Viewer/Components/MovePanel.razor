@@ -59,22 +59,22 @@
                                         @onclick="() => OnPlay.InvokeAsync((complete[int.Parse(Picked(input.Key, complete))], null))">@Names.Input(input.Key)</button>
                             </div>
                         }
-                        <div class="buttons">
-                            @foreach (ValidInput move in input.Where(m => !Select || !m.IsComplete))
-                            {
-                                if (move.IsComplete)
+                        @if (input.Where(m => !Select && m.IsComplete).ToList() is { Count: > 0 } buttons)
+                        {
+                            <div class="buttons">
+                                @foreach (ValidInput move in buttons)
                                 {
                                     <button class="move" @onclick="() => OnPlay.InvokeAsync((move, null))">@ArgumentLabel(move)</button>
                                 }
-                                else
-                                {
-                                    @* Keyed by the move, so a form left behind by the last position starts empty. *@
-                                    <MoveForm @key="move" Move="move" Label="@ArgumentLabel(move)" Names="Names"
-                                              Refusals="@(ReferenceEquals(move, Refused) ? Refusals : null)"
-                                              OnSubmit="values => OnPlay.InvokeAsync((move, values))" />
-                                }
-                            }
-                        </div>
+                            </div>
+                        }
+                        @if (input.Where(m => !m.IsComplete).ToList() is { Count: > 0 } open)
+                        {
+                            @* Keyed by the moves, so a form left behind by the last position starts empty. *@
+                            <MoveForm @key="@string.Join(" | ", open.Select(m => Names.Describe(m)))" Moves="open" Label="ArgumentLabel" Names="Names"
+                                      Refusals="@(open.Any(m => ReferenceEquals(m, Refused)) ? Refusals : null)"
+                                      OnSubmit="p => OnPlay.InvokeAsync((p.Move, p.Open))" />
+                        }
                     </div>
                 }
             </div>

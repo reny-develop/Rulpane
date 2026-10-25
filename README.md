@@ -59,7 +59,7 @@ Without a view, the screen is generated from the rule set:
 
 - its `projections` are shown if it has any; otherwise the state is shown as it is
 - the results of `GetValidInputs` are shown as buttons, grouped by actor and then by input; no move is set apart from the others, because the rules do not rank them
-- an input with `open` parameters is shown as a form, and a refusal the rules name against a parameter is shown under its field; a parameter whose schema is a `type.enum` is a list of the values it allows, rather than a box to type in
+- an input with `open` parameters is one form, whatever its other parameters' domains give: those choices are a list in the form, so what is typed is asked for once. A refusal the rules name against a parameter is shown under its field; a parameter whose schema is a `type.enum` is a list of the values it allows, rather than a box to type in
 - an input that draws picks one outcome in the browser, weighted by the probabilities from `GetOutcomes`
 - a terminal state shows its result
 

@@ -16,12 +16,14 @@ This page is everything needed to write one. It is meant to be read by a person 
    [A whole paneset](#a-whole-paneset) and change it; do not invent keys or operations that
    are not on this page.
 3. Give the person **the link**: `https://reny-develop.github.io/Rulpane/#p=` followed by the
-   paneset as JSON on one line, with every space written as `%20` (a chat cuts a link at a
-   space). Nothing else needs encoding.
+   paneset as JSON on one line, with **every space written as `%20` — inside strings too, such
+   as `"Mon%20am"`**, or a chat cuts the link at the first one. Nothing else needs encoding;
+   other languages' characters may stay as they are.
 4. Also give **the JSON itself** in a code block, and say: if the link does not open, paste
    the JSON into the editor at <https://reny-develop.github.io/Rulpane/#make>, press
    "Make link", and tell me the reason it shows. The reason names the key that is wrong.
-5. Say plainly what Rulpane cannot do (see [What a link cannot do](#what-a-link-cannot-do)),
+5. Before answering, check the paneset against [Before you answer](#before-you-answer).
+6. Say plainly what Rulpane cannot do (see [What a link cannot do](#what-a-link-cannot-do)),
    when the request needs it: anybody holding the link can take any step, and nothing is
    hidden from them.
 
@@ -44,7 +46,7 @@ deflated base64url). That form is for the page; never write it by hand.
 
 ```jsonc
 {
-  "$schema": "rulpane/paneset/v1",
+  "$schema": "rulpane/paneset/v1",   // required
   "r": …,   // the rules: a rule set document, or the name of one — required
   "v": …,   // the view: what the screen shows, and where — optional
   "t": …,   // the theme: colours, corners, type, spacing — optional
@@ -53,7 +55,9 @@ deflated base64url). That form is for the page; never write it by hand.
 }
 ```
 
-Each of `r`, `v` and `t` is the document written in place, or a name:
+The paneset, a view and a theme each **must** carry their `$schema` (`rulpane/paneset/v1`,
+`rulealize/view/v1`, `rulealize/theme/v1`); one without it is refused. A rule set's `$schema`
+is only a label. Each of `r`, `v` and `t` is the document written in place, or a name:
 
 | Key | Names that exist |
 | --- | --- |
@@ -265,7 +269,9 @@ Lists of them are `type.list` with an `element` type, and a list of records is `
     `when`, `actor` or a domain.
 - `when` — whether the input is allowed now. Left out, it always is.
 - `validate` — checked when an open value arrives; each clause's `code` is the refusal shown
-  under the field when `require` is false.
+  under the field when `require` is false. **Every clause must read an open parameter**; a
+  condition on the state or on a `domain` parameter alone is refused here and belongs in `when`
+  (which may read domain parameters, so "only a free slot" is `when`, not `validate`).
 - `actor` — a label for whose step this is. The screen groups steps by it. **Nobody signs in:**
   anybody holding the link can take any step; the label only says whose it is meant to be.
 
@@ -599,6 +605,17 @@ or the theme is refused with the pair that failed. The top bar keeps Rulpane's o
   HTML or script; text in a view is shown as text. The top bar always says who made the screen.
 - **Use plugins other than those above**, or more than a bounded amount of work per step.
 
+## Before you answer
+
+- [ ] The paneset, and `v` and `t` when written in place, each have their `$schema`.
+- [ ] Every `op` is in [Operations](#operations), with only the keys its form shows.
+- [ ] Every plugin whose `op`, `$`, `@` or `#` is used is in `requires`.
+- [ ] Lists where an expression goes are `seq.of`, not JSON arrays (arrays are fine in
+      `state.initial`, `s` and a view).
+- [ ] No open parameter is read in `when`, `actor` or a `domain`; every `validate` clause reads one.
+- [ ] Every view binding names a projection the rules have (or a state field as `$name`).
+- [ ] The link is one line, and every space in it is `%20`.
+
 ## When it does not open
 
 The page shows why, with the path to the node at fault, for instance:
@@ -614,6 +631,7 @@ The usual causes:
 - an operation that is not in [Operations](#operations), or a key that is not in its form;
 - a plugin used but missing from `requires`;
 - a list written as a JSON array where an expression goes, instead of `seq.of`;
-- an open parameter read in `when` or a domain;
+- an open parameter read in `when` or a domain, or a `validate` clause that reads none;
+- a paneset, view or theme without its `$schema`;
 - a view binding a projection the rules do not have, or a key a table's records do not have;
 - the link cut at a space: write spaces as `%20`.

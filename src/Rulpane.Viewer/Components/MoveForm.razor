@@ -1,9 +1,24 @@
 @using System.Text.Json.Nodes
 @using Rulealize
 @using Rulealize.Abstraction.Value
-@* A move still waiting for values nobody enumerated — typed by the person in front of the screen. *@
+@* An input's moves still waiting for values nobody enumerated — typed by the person in front of
+   the screen. Moves that differ only in the arguments their domains gave are one form, those
+   arguments a list to pick from, so the values to type are asked for once. *@
 
 <form class="move-form" @onsubmit="Submit">
+    @if (Moves.Count > 1)
+    {
+        <label class="field">
+            <span class="label">@string.Join(", ", Move.Arguments.Select(a => Names.Param(a.Key)))</span>
+            <select @bind="choice">
+                <option value="" disabled>@Say("Choose…", "選んでください…")</option>
+                @foreach (var (move, i) in Moves.Select((m, i) => (m, i)))
+                {
+                    <option value="@i">@Label(move)</option>
+                }
+            </select>
+        </label>
+    }
     @foreach (OpenParameter parameter in Move.Open)
     {
         string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
@@ -35,20 +50,31 @@
         </label>
     }
     <div>
-        <button type="submit" class="primary move"><Icon Name="arrow" />@Label</button>
+        <button type="submit" class="primary move" disabled="@(Picked is null)"><Icon Name="arrow" />@(Moves.Count > 1 ? Names.Input(Move.Input) : Label(Move))</button>
     </div>
 </form>
 
 @code {
-    [Parameter, EditorRequired] public ValidInput Move { get; set; } = default!;
-    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    /// <summary>One input's moves, all with the same parameters left open.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ValidInput> Moves { get; set; } = default!;
+
+    /// <summary>What to call a move by the arguments its domains gave.</summary>
+    [Parameter, EditorRequired] public Func<ValidInput, string> Label { get; set; } = default!;
     [Parameter] public Names Names { get; set; } = Names.None;
-    [Parameter] public EventCallback<IReadOnlyDictionary<string, JsonNode?>> OnSubmit { get; set; }
+    [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?> Open)> OnSubmit { get; set; }
 
     /// <summary>The codes the rules answered the last attempt with, by the parameter they are about.</summary>
     [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
 
     private readonly Dictionary<string, string> values = new();
+    private string choice = "";
+
+    // The one picked from the list, or the only one there is.
+    private ValidInput? Picked =>
+        Moves.Count == 1 ? Moves[0] : int.TryParse(choice, out int i) && i < Moves.Count ? Moves[i] : null;
+
+    // The open parameters are the input's, the same for each of its moves.
+    private ValidInput Move => Picked ?? Moves[0];
 
     protected override void OnParametersSet()
     {
@@ -60,8 +86,13 @@
 
     private Task Submit()
     {
-        var typed = Move.Open.ToDictionary(p => p.Name, p => (JsonNode?)Convert(p, values[p.Name]));
-        return OnSubmit.InvokeAsync(typed);
+        if (Picked is not ValidInput move)
+        {
+            return Task.CompletedTask;
+        }
+
+        var typed = move.Open.ToDictionary(p => p.Name, p => (JsonNode?)Convert(p, values[p.Name]));
+        return OnSubmit.InvokeAsync((move, typed));
     }
 
     // An enumeration declares its values among its bounds; null for a parameter that lists none.

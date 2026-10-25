@@ -38,11 +38,13 @@ and, if it helps, where to start in <code>s</code>. Start from the complete exam
 <a href="#a-whole-paneset">A whole paneset</a> and change it; do not invent keys or operations that
 are not on this page.</li>
 <li>Give the person <strong>the link</strong>: <code>https://reny-develop.github.io/Rulpane/#p=</code> followed by the
-paneset as JSON on one line, with every space written as <code>%20</code> (a chat cuts a link at a
-space). Nothing else needs encoding.</li>
+paneset as JSON on one line, with <strong>every space written as <code>%20</code> — inside strings too, such
+as <code>&quot;Mon%20am&quot;</code></strong>, or a chat cuts the link at the first one. Nothing else needs encoding;
+other languages' characters may stay as they are.</li>
 <li>Also give <strong>the JSON itself</strong> in a code block, and say: if the link does not open, paste
 the JSON into the editor at <a href="https://reny-develop.github.io/Rulpane/#make">https://reny-develop.github.io/Rulpane/#make</a>, press
 &quot;Make link&quot;, and tell me the reason it shows. The reason names the key that is wrong.</li>
+<li>Before answering, check the paneset against <a href="#before-you-answer">Before you answer</a>.</li>
 <li>Say plainly what Rulpane cannot do (see <a href="#what-a-link-cannot-do">What a link cannot do</a>),
 when the request needs it: anybody holding the link can take any step, and nothing is
 hidden from them.</li>
@@ -59,7 +61,7 @@ so any <code>&amp;</code>, <code>#</code> or <code>=</code> inside its strings i
 deflated base64url). That form is for the page; never write it by hand.</p>
 <h2 id="a-paneset">A paneset</h2>
 <pre><code class="language-jsonc">{
-  &quot;$schema&quot;: &quot;rulpane/paneset/v1&quot;,
+  &quot;$schema&quot;: &quot;rulpane/paneset/v1&quot;,   // required
   &quot;r&quot;: …,   // the rules: a rule set document, or the name of one — required
   &quot;v&quot;: …,   // the view: what the screen shows, and where — optional
   &quot;t&quot;: …,   // the theme: colours, corners, type, spacing — optional
@@ -67,7 +69,9 @@ deflated base64url). That form is for the page; never write it by hand.</p>
   &quot;b&quot;: …    // which of the rules' names the view reads under other names — optional
 }
 </code></pre>
-<p>Each of <code>r</code>, <code>v</code> and <code>t</code> is the document written in place, or a name:</p>
+<p>The paneset, a view and a theme each <strong>must</strong> carry their <code>$schema</code> (<code>rulpane/paneset/v1</code>,
+<code>rulealize/view/v1</code>, <code>rulealize/theme/v1</code>); one without it is refused. A rule set's <code>$schema</code>
+is only a label. Each of <code>r</code>, <code>v</code> and <code>t</code> is the document written in place, or a name:</p>
 <table>
 <thead>
 <tr>
@@ -366,7 +370,9 @@ state field <code>name</code>. An open parameter may be read in <code>effects</c
 </li>
 <li><code>when</code> — whether the input is allowed now. Left out, it always is.</li>
 <li><code>validate</code> — checked when an open value arrives; each clause's <code>code</code> is the refusal shown
-under the field when <code>require</code> is false.</li>
+under the field when <code>require</code> is false. <strong>Every clause must read an open parameter</strong>; a
+condition on the state or on a <code>domain</code> parameter alone is refused here and belongs in <code>when</code>
+(which may read domain parameters, so &quot;only a free slot&quot; is <code>when</code>, not <code>validate</code>).</li>
 <li><code>actor</code> — a label for whose step this is. The screen groups steps by it. <strong>Nobody signs in:</strong>
 anybody holding the link can take any step; the label only says whose it is meant to be.</li>
 </ul>
@@ -1417,6 +1423,17 @@ link make two separate histories; send the link on, one person at a time.</li>
 HTML or script; text in a view is shown as text. The top bar always says who made the screen.</li>
 <li><strong>Use plugins other than those above</strong>, or more than a bounded amount of work per step.</li>
 </ul>
+<h2 id="before-you-answer">Before you answer</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The paneset, and <code>v</code> and <code>t</code> when written in place, each have their <code>$schema</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every <code>op</code> is in <a href="#operations">Operations</a>, with only the keys its form shows.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every plugin whose <code>op</code>, <code>$</code>, <code>@</code> or <code>#</code> is used is in <code>requires</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Lists where an expression goes are <code>seq.of</code>, not JSON arrays (arrays are fine in
+<code>state.initial</code>, <code>s</code> and a view).</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> No open parameter is read in <code>when</code>, <code>actor</code> or a <code>domain</code>; every <code>validate</code> clause reads one.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every view binding names a projection the rules have (or a state field as <code>$name</code>).</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The link is one line, and every space in it is <code>%20</code>.</li>
+</ul>
 <h2 id="when-it-does-not-open">When it does not open</h2>
 <p>The page shows why, with the path to the node at fault, for instance:</p>
 <pre><code>/inputs/go/effects[0]/value: 'math.add' comes from Rulealize.Plugin.Arithmetic, which this rule set does not name in 'requires'.
@@ -1428,7 +1445,8 @@ HTML or script; text in a view is shown as text. The top bar always says who mad
 <li>an operation that is not in <a href="#operations">Operations</a>, or a key that is not in its form;</li>
 <li>a plugin used but missing from <code>requires</code>;</li>
 <li>a list written as a JSON array where an expression goes, instead of <code>seq.of</code>;</li>
-<li>an open parameter read in <code>when</code> or a domain;</li>
+<li>an open parameter read in <code>when</code> or a domain, or a <code>validate</code> clause that reads none;</li>
+<li>a paneset, view or theme without its <code>$schema</code>;</li>
 <li>a view binding a projection the rules do not have, or a key a table's records do not have;</li>
 <li>the link cut at a space: write spaces as <code>%20</code>.</li>
 </ul>

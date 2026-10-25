@@ -57,7 +57,7 @@ public sealed class Opener(HttpClient http, RuleRuntime runtime)
             if (!panesets.TryGetValue(named, out ground!))
             {
                 texts[paneSource] = await paneSource.ReadAsync(http);
-                ground = Paneset.Parse(texts[paneSource]);
+                ground = Says("p", () => Paneset.Parse(texts[paneSource]));
                 panesets[named] = ground;
             }
 
@@ -87,7 +87,7 @@ public sealed class Opener(HttpClient http, RuleRuntime runtime)
             if (!views.TryGetValue((rules, layout, bind), out view))
             {
                 texts[viewSource] = await viewSource.ReadAsync(http);
-                view = View.Parse(texts[viewSource], context, texts[source], screen.Bind);
+                view = Says("v", () => View.Parse(texts[viewSource], context, texts[source], screen.Bind));
                 views[(rules, layout, bind)] = view;
             }
 
@@ -109,7 +109,7 @@ public sealed class Opener(HttpClient http, RuleRuntime runtime)
             if (!themes.TryGetValue(look, out theme))
             {
                 texts[themeSource] = await themeSource.ReadAsync(http);
-                theme = Theme.Parse(texts[themeSource]);
+                theme = Says("t", () => Theme.Parse(texts[themeSource]));
                 themes[look] = theme;
             }
 
@@ -123,5 +123,19 @@ public sealed class Opener(HttpClient http, RuleRuntime runtime)
         Dictionary<string, System.Text.Json.Nodes.JsonNode?> projections = session.Context.Projections.ToDictionary(name => name, session.Project);
         view?.Check(name => projections.GetValueOrDefault(name), session.Data);
         return new Opened(linked, paneSource, source, viewSource, themeSource, view, theme, session, holds[rules], gallery, texts);
+    }
+
+    // A refusal says which document it is about, as the key that holds it, so "$schema: missing."
+    // reads as the view's and not the paneset's. One that already names its key is left as it is.
+    private static T Says<T>(string key, Func<T> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch (FormatException e) when (!e.Message.StartsWith(key + ":", StringComparison.Ordinal))
+        {
+            throw new FormatException($"{key}: {e.Message}", e);
+        }
     }
 }
