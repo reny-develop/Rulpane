@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Rulpane.Viewer/Rulpane.Viewer.csproj" />
   </Folder>
+  <Folder Name="/tool/">
+    <Project Path="tool/Mirror/Rulpane.Mirror.csproj" />
+  </Folder>
 </Solution>

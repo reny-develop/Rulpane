@@ -26,6 +26,12 @@ jobs:
 
       - run: dotnet publish src/Rulpane.Viewer -c Release -o publish
 
+      # The Registry's rule sets, copied from nuget.org to beside the viewer, for r=<id>@<version>
+      # and for any rules whose uses name them: the page can fetch nothing but its own origin.
+      # Run on every deploy, so a version the Registry withholds stops opening at the next one.
+      - name: Mirror the Registry's rule sets
+        run: dotnet run --project tool/Mirror -c Release -- publish/wwwroot/registry
+
       # A project site is served under /<repository>/, and the viewer resolves everything —
       # its framework files and the bundled rule sets — against <base>.
       - name: Point base at the repository path

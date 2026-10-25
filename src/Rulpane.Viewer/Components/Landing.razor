@@ -20,7 +20,7 @@
             <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("t", "paper"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="t">&amp;t=paper</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
             <dl>
                 <dt><span class="chip accent">r</span></dt>
-                <dd>The rule set: a bundled name, or the JSON itself, compressed</dd>
+                <dd>The rule set: a bundled name, one from the Registry as <span class="mono">id@version</span>, or the JSON itself, compressed</dd>
                 <dt><span class="chip warn">v</span></dt>
                 <dd>The view: where each value goes. Left out, the screen is made from the rules</dd>
                 <dt><span class="chip">t</span></dt>
@@ -82,8 +82,56 @@
 
     <section class="section">
         <div class="section-head">
+            <h2>From the Registry</h2>
+            <p>Rule sets published to the Rulealize Registry, by whoever wrote them. A link names one at a version, and what it holds is fetched with it.</p>
+        </div>
+        @if (registryProblem is not null)
+        {
+            <p class="muted">@registryProblem</p>
+        }
+        else if (registered is null)
+        {
+            <p class="muted">Loading…</p>
+        }
+        else
+        {
+            <ul class="samples">
+                @foreach (Listed listed in registered)
+                {
+                    <li>
+                        @if (listed.Problem is null)
+                        {
+                            <a class="card sample" href="@(BaseUri + Fragment.Build(("r", listed.Reference)))">
+                                <span class="sample-head">@listed.Entry.Id<Icon Name="arrow" /></span>
+                                <p>@listed.Entry.Description</p>
+                                <span class="tags">
+                                    <span class="chip">@listed.Entry.Latest</span>
+                                    @if (listed.Holds)
+                                    {
+                                        <span class="chip">uses</span>
+                                    }
+                                </span>
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="card sample unavailable">
+                                <span class="sample-head">@listed.Entry.Id</span>
+                                <p>@listed.Entry.Description</p>
+                                <span class="tags"><span class="chip">@listed.Entry.Latest</span><span class="chip warn">Rulpane cannot run it</span></span>
+                                <p class="muted">@listed.Problem</p>
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="section">
+        <div class="section-head">
             <h2>Make a link from your own rules</h2>
-            <p>Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens.</p>
+            <p>Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens. A rule set that <span class="mono">uses</span> one from the Registry gets it from there, so the link carries only what you wrote.</p>
         </div>
         <div class="card make">
             <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
@@ -143,6 +191,12 @@
         new("reversi", "The same template on reversi, whose board and turn are state fields. Passing is under the board.", ["grid-game", "bind $"], View: "reversi-grid-game"),
     ];
 
+    // A registered rule set at its newest version, or why Rulpane cannot run it.
+    private sealed record Listed(Registered Entry, bool Holds, string? Problem)
+    {
+        public string Reference => $"{Entry.Id}@{Entry.Latest}";
+    }
+
     // approval, submitted and waiting for review.
     private const string ExampleState = "z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE";
 
@@ -160,8 +214,39 @@
     private string? problem;
     private string? link;
     private string? id;
+    private List<Listed>? registered;
+    private string? registryProblem;
 
     private string Host => new Uri(BaseUri).Host + new Uri(BaseUri).AbsolutePath;
+
+    // Each is compiled before it is offered, as a link made below is.
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var listed = new List<Listed>();
+            foreach (Registered entry in await Registry.IndexAsync(Http))
+            {
+                try
+                {
+                    Document[] package = await Registry.PackageAsync(Http, entry.Id, entry.Latest);
+                    IReadOnlyList<Document> held = await Registry.HoldsAsync(Http, package[0].Text, package[1..]);
+                    Registry.Compile(Runtime, package[0].Text, held);
+                    listed.Add(new Listed(entry, held.Count > 0, null));
+                }
+                catch (Exception e)
+                {
+                    listed.Add(new Listed(entry, false, e.Message));
+                }
+            }
+
+            registered = listed;
+        }
+        catch (Exception e)
+        {
+            registryProblem = e.Message;
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -181,7 +266,7 @@
         link = null;
         try
         {
-            RuleContext context = Runtime.CreateContext(document);
+            RuleContext context = Registry.Compile(Runtime, document, await Registry.HoldsAsync(Http, document));
             string? view = null;
             if (!string.IsNullOrWhiteSpace(viewDocument))
             {

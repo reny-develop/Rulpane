@@ -9,6 +9,7 @@ https://<user>.github.io/Rulpane/#r=approval&v=approval
 https://<user>.github.io/Rulpane/#r=reversi&v=reversi
 https://<user>.github.io/Rulpane/#r=approval&v=approval&t=paper
 https://<user>.github.io/Rulpane/#r=approval&v=approval-stages
+https://<user>.github.io/Rulpane/#r=Rulealize.RuleSet.SignedRequest@1.1.0
 ```
 
 ## The URL
@@ -17,12 +18,24 @@ Everything goes in the fragment (after `#`), which the browser never sends to a 
 
 | Key | Value |
 | --- | --- |
-| `r` | The rule set. A lowercase name is one bundled with the viewer (`wwwroot/rulesets/<name>.json`); a value starting with `z:` is JSON, deflated and base64url-encoded |
+| `r` | The rule set. A lowercase name is one bundled with the viewer (`wwwroot/rulesets/<name>.json`); `<id>@<version>` is one published to the [Rulealize Registry](https://github.com/reny-develop/Rulealize.Registry), at exactly that version; a value starting with `z:` is JSON, deflated and base64url-encoded |
 | `v` | The view: where each value goes on the screen. A lowercase name is one bundled with the viewer (`wwwroot/views/<name>.json`); `z:` is the JSON, packed as for `r`. Omitted, the screen is generated from the rule set |
 | `t` | The theme: how the screen under the bar looks. A lowercase name is one bundled with the viewer (`wwwroot/themes/<name>.json`); `z:` is the JSON, packed as for `r`. Omitted, the screen looks like Rulpane |
 | `s` | The state: only the `data` of the state document, in the `z:` form. Omitted, the rule set starts from its initial state |
 
 The URL is rewritten on every move, so the browser's Back button is an undo, and sharing the URL hands over the position as it stands.
+
+## Rule sets from the Registry
+
+`r=Rulealize.RuleSet.Request@1.1.0` names a rule set the Rulealize Registry indexes, with all three numbers of its version, so a link says which document it ran. The viewer never fetches anything outside its own origin, so every deploy copies them in first: [`tool/Mirror`](tool/Mirror/Program.cs) reads the Registry's catalogue, takes the documents out of each version's package on nuget.org, and writes them to `registry/` beside the viewer. A version the Registry withholds is not copied, and a link to it stops opening at the next deploy.
+
+What any rule set holds through `uses` is read from the same copy, however the rule set itself arrived — bundled, from the Registry, or in the link. A part its own package ships is taken from the package; anything else is the lowest version the Registry has that satisfies every `uses` naming it, as `RuleSetRequirement.Choose` decides, so a link resolves to the same documents however many versions are published after it. A rule set in a link can therefore carry only what it adds — `uses`, `held` and `projections` — and leave what it holds to the Registry.
+
+```sh
+dotnet run --project tool/Mirror -- src/Rulpane.Viewer/wwwroot/registry   # for a local run; the folder is ignored by git
+```
+
+The start page lists the newest version of each, once it has compiled it; one Rulpane cannot run is listed with the reason.
 
 ## The screen
 
@@ -165,7 +178,7 @@ A theme is checked when the link is opened. Every pair of colours the screen set
 
 ## Who made the screen
 
-When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, what a link can do, what to watch for, and the documents themselves.
+When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." When nothing came in the link but the rules are from the Registry, it says "Published by others, not by Rulpane." in place of the first sentence. The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, which rule sets from the Registry it runs, what a link can do, what to watch for, and the documents themselves, the ones the rules hold included.
 
 ## Plugins
 
@@ -177,4 +190,4 @@ A rule set in a URL can use only the plugins listed in [`CuratedRuntime`](src/Ru
 dotnet run --project src/Rulpane.Viewer --launch-profile http   # http://localhost:5080
 ```
 
-A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
+A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".

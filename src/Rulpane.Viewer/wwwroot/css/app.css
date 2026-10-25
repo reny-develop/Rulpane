@@ -629,3 +629,5 @@ main.compact { padding-top: 20px; }
     color: var(--color-text);
 }
 #blazor-error-ui .dismiss { cursor: pointer; float: right; }
+.sample.unavailable { cursor: default; }
+.sample.unavailable:hover { border-color: var(--color-line); }

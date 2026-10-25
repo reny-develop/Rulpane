@@ -8,9 +8,9 @@
 <div class="provenance">
     <button class="provenance-button @(open ? "open" : null)" @onclick="Toggle" aria-expanded="@open" aria-controls="provenance-details">
         <Icon Name="shield" Size="14" />
-        <span class="long">Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment.</span>
+        <span class="long">@(InLink ? "Made by the link's author" : "Published by others"), not by Rulpane. Rulpane never asks for passwords or payment.</span>
         @* Two lines set by hand, so the button is only as wide as the longer of them. *@
-        <span class="short"><span>Made by the link's author, not Rulpane.</span><span>Rulpane never asks for passwords.</span></span>
+        <span class="short"><span>@(InLink ? "Made by the link's author" : "Published by others"), not Rulpane.</span><span>Rulpane never asks for passwords.</span></span>
         <Icon Name="info" Size="14" />
     </button>
 
@@ -25,7 +25,14 @@
             </div>
             <div class="details-section">
                 <h3>Who made it</h3>
-                <p>Whoever made this link. The rules, the layout and the look travel inside the link itself, and Rulpane runs them without checking who wrote them.</p>
+                @if (InLink)
+                {
+                    <p>Whoever made this link. The rules, the layout and the look travel inside the link itself, and Rulpane runs them without checking who wrote them.</p>
+                }
+                @if (Published.Count > 0)
+                {
+                    <p>@(InLink ? "The link also names" : "The link names") rules published to the Rulealize Registry: @string.Join(", ", Published). Whoever published them wrote them. The Registry checks that a package is the one it says it is, and nobody reviews what its rules do.</p>
+                }
             </div>
             <div class="details-section">
                 <h3>What Rulpane makes sure of</h3>
@@ -57,6 +64,12 @@
 @code {
     /// <summary>The documents the screen is made from, by what they are, as they arrived.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<(string Name, string Text)> Documents { get; set; } = default!;
+
+    /// <summary>The rule sets from the Registry the screen runs, each as its identifier and version.</summary>
+    [Parameter] public IReadOnlyList<string> Published { get; set; } = [];
+
+    /// <summary>Whether any document was written into the link itself, rather than only named by it.</summary>
+    [Parameter] public bool InLink { get; set; } = true;
 
     private bool open;
     private bool showing;
