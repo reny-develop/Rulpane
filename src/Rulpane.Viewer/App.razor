@@ -286,7 +286,7 @@
                 if (!views.TryGetValue((rules, layout), out view))
                 {
                     texts[viewSource] = await viewSource.ReadAsync(Http);
-                    view = View.Parse(texts[viewSource], context);
+                    view = View.Parse(texts[viewSource], context, texts[source]);
                     views[(rules, layout)] = view;
                 }
             }

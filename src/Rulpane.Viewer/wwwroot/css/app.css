@@ -34,6 +34,12 @@
     --color-warn: #7a5300;
     --color-warn-soft: #fdf0c8;
 
+    /* Core, so the same in either mode: a dark piece stays dark. */
+    --color-piece-dark: #14161a;
+    --color-piece-dark-ring: #43464e;
+    --color-piece-light: #fbfbf8;
+    --color-piece-light-ring: #b9bdb3;
+
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
@@ -394,6 +400,43 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .table th { padding: 10px 18px; text-align: left; font-size: 12px; font-weight: 500; color: var(--color-muted); border-bottom: 1px solid var(--color-line); white-space: nowrap; }
 .table td { padding: 10px 18px; vertical-align: top; overflow-wrap: anywhere; }
 .table tbody tr + tr td { border-top: 1px solid var(--color-line); }
+
+/* A board keeps its squares square, and as wide as the card lets it up to a comfortable size. */
+.board-card { padding: 16px 18px 18px; }
+.board-card .card-head { margin: -16px -18px 16px; }
+.board {
+    display: grid;
+    grid-template-columns: auto repeat(var(--files), minmax(0, 1fr));
+    gap: 3px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.board-label { display: grid; place-items: center; padding: 0 4px; font: 500 11px var(--font-mono); color: var(--color-muted); }
+.square {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-sunken);
+}
+.square.playable { cursor: pointer; }
+.square.playable:hover { background: var(--color-accent-soft); border-color: transparent; }
+/* Where the rules allow a move, a small dot; the move itself is the rules' to name. */
+.square.playable:not(:has(*))::after {
+    content: ""; width: 22%; height: 22%; border-radius: 50%; background: var(--color-accent); opacity: 0.55;
+}
+.square-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 11px var(--font-mono); }
+.piece { width: 78%; height: 78%; border-radius: 50%; }
+.piece.dark { background: var(--color-piece-dark); box-shadow: inset 0 0 0 1px var(--color-piece-dark-ring); }
+.piece.light { background: var(--color-piece-light); box-shadow: inset 0 0 0 1px var(--color-piece-light-ring); }
+.piece.accent { background: var(--color-accent); }
+.piece.ok { background: var(--color-ok); }
+.piece.warn { background: var(--color-warn); }
+.piece.danger { background: var(--color-danger); }
+.board-rejection { margin-top: 12px; }
 
 /*
  * Wide: the pinned block dissolves into the grid. Head and last move span both

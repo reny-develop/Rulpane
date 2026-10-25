@@ -6,6 +6,7 @@ A web service that turns a [Rulealize](https://github.com/reny-develop/Rulealize
 https://<user>.github.io/Rulpane/#r=approval
 https://<user>.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE
 https://<user>.github.io/Rulpane/#r=approval&v=approval
+https://<user>.github.io/Rulpane/#r=reversi&v=reversi
 ```
 
 ## The URL
@@ -60,6 +61,7 @@ A binding is a projection then `.`-separated steps into it (`summary.stage`), or
 | `fields` | A card of `rows`, each a `label` and a `bind`. With `tone`, the value is a chip coloured by it: `neutral`, `accent`, `ok`, `warn` or `danger` |
 | `stats` | `items`, each a `label` and a `bind`, set large |
 | `table` | The list at `bind`, one record per line. `columns` are keys, or `{ "key", "label" }`; without them, every key |
+| `board` | The Grid board in the state field at `bind` (`$board`), square by square; its size and coordinates come from the field's `grid.board` schema. `play` (`"place.at"`, an input and its parameter) makes each square that input can be played on a button, when exactly one of its moves is played there. `pieces` maps a value to a piece, `dark`, `light`, `accent`, `ok`, `warn` or `danger`; a value it leaves out is shown as text |
 | `actions` | The moves of `inputs`, a list of input names or `"*"` for all. A block naming inputs none of which can be played now is not shown |
 
 Every block, and every row of `fields`, takes `showWhen`, a binding: it is shown only while that reads `true`. The game's end and its result are shown above the layout whatever the view says.

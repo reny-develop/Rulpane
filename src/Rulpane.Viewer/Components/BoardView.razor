@@ -1,0 +1,79 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using Rulealize
+@*
+    A Grid board, drawn square by square. A square is a button only when the rules offer exactly
+    one move of the board's input on it; which squares those are is the rules' answer, not the board's.
+*@
+
+<section class="card board-card">
+    @if (Board.Title is not null)
+    {
+        <div class="card-head"><h2>@Board.Title</h2></div>
+    }
+    <div class="board" style="--files: @Shape.Width">
+        <span></span>
+        @for (int x = 0; x < Shape.Width; x++)
+        {
+            <span class="board-label">@Shape.File(x)</span>
+        }
+        @for (int row = 0; row < Shape.Height; row++)
+        {
+            <span class="board-label">@Shape.Rank(row)</span>
+            @for (int x = 0; x < Shape.Width; x++)
+            {
+                string coord = Shape.Coord(x, row);
+                string? text = Value is JsonObject squares && squares[coord] is JsonNode cell ? Text(cell) : null;
+                if (MoveOn(coord) is ValidInput move)
+                {
+                    <button class="square playable" title="@move" aria-label="@($"{Board.Play!.Input} {coord}")"
+                            @onclick="() => OnPlay.InvokeAsync((move, null))">
+                        <Square Text="@text" Pieces="Board.Pieces" />
+                    </button>
+                }
+                else
+                {
+                    <span class="square" aria-label="@($"{coord}: {text ?? "empty"}")">
+                        <Square Text="@text" Pieces="Board.Pieces" />
+                    </span>
+                }
+            }
+        }
+    </div>
+    @if (Rejection is not null && Refused?.Input == Board.Play?.Input)
+    {
+        <p class="rejection board-rejection"><Icon Name="alert" Size="14" /><code>@Rejection</code></p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Board Board { get; set; } = default!;
+
+    /// <summary>The board as the state holds it: an object of the squares that have something on them.</summary>
+    [Parameter] public JsonNode? Value { get; set; }
+
+    /// <summary>The moves the rules allow; null once they have ended, when no square is played.</summary>
+    [Parameter] public IReadOnlyCollection<ValidInput>? Moves { get; set; }
+
+    [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?>? Open)> OnPlay { get; set; }
+    [Parameter] public ValidInput? Refused { get; set; }
+    [Parameter] public string? Rejection { get; set; }
+
+    private BoardShape Shape => Board.Shape;
+
+    // A square two moves share would need a choice the board cannot offer, so those stay with the actions.
+    private ValidInput? MoveOn(string coord)
+    {
+        if (Board.Play is not SquareMove play || Moves is null)
+        {
+            return null;
+        }
+
+        var on = Moves.Where(m => m.Input == play.Input && m.IsComplete
+            && m.Arguments.TryGetValue(play.Parameter, out string? at) && Display.Unquote(at) == coord).Take(2).ToList();
+        return on.Count == 1 ? on[0] : null;
+    }
+
+    private static string Text(JsonNode cell) =>
+        cell is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : cell.ToJsonString();
+}

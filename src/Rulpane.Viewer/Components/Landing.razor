@@ -92,6 +92,7 @@
         new("approval", "The same rules, laid out by a view: a claim, its stage, the review.", ["view", "showWhen"], View: "approval"),
         new("countdown", "The total set large; the moves under it.", ["view", "stats"], View: "countdown"),
         new("roster", "Who is on which shift, as tables, with a block of moves for each input.", ["view", "table"], View: "roster"),
+        new("reversi", "The board drawn square by square: choose a square to place there.", ["view", "board"], View: "reversi"),
     ];
 
     // approval, submitted and waiting for review.
@@ -135,7 +136,7 @@
             string? view = null;
             if (!string.IsNullOrWhiteSpace(viewDocument))
             {
-                View.Parse(viewDocument, context);
+                View.Parse(viewDocument, context, document);
                 view = Fragment.Pack(Minify(viewDocument));
             }
 

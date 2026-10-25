@@ -92,6 +92,9 @@
                     }
                 </section>
                 break;
+            case Board board:
+                <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="@Rejection" />
+                break;
             @* Moves of named inputs that none of are available now leave nothing to show; "*" always says so. *@
             case Actions actions when Moves is not null && (actions.Inputs is null || Offered(actions).Count > 0):
                 <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? "Moves")" Side="false"

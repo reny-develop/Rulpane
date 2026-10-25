@@ -1,0 +1,20 @@
+@* What is on one square: a piece where the view names one for the value, the value itself otherwise. *@
+
+@if (Text is null)
+{
+}
+else if (Pieces is not null && Pieces.TryGetValue(Text, out Piece piece))
+{
+    <span class="piece @piece"></span>
+}
+else
+{
+    <span class="square-text">@Text</span>
+}
+
+@code {
+    /// <summary>The square's value as text; null for an empty square.</summary>
+    [Parameter] public string? Text { get; set; }
+
+    [Parameter] public IReadOnlyDictionary<string, Piece>? Pieces { get; set; }
+}

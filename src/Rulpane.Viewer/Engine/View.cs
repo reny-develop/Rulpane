@@ -13,19 +13,24 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
 {
     public const string Schema = "rulealize/view/v1";
 
+    private static readonly JsonDocumentOptions Lenient = new()
+    {
+        CommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+    };
+
     /// <summary>
     /// Reads a view and checks it against the rules it will show: every binding names a
     /// projection or a state field they have, and every input it lists is one they offer.
+    /// <paramref name="rules"/> is the rule set's document, which <paramref name="context"/>
+    /// was compiled from: a board's size is in its state schema, and nowhere else.
     /// </summary>
-    public static View Parse(string json, RuleContext context)
+    public static View Parse(string json, RuleContext context, string rules)
     {
-        JsonObject root = JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
-        {
-            CommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-        }) as JsonObject ?? throw new FormatException("A view is a JSON object.");
+        JsonObject root = JsonNode.Parse(json, documentOptions: Lenient) as JsonObject
+            ?? throw new FormatException("A view is a JSON object.");
 
-        var reader = new Reader(context);
+        var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient));
         reader.Keys(root, "", "$schema", "ruleSet", "title", "layout");
         if (Reader.String(root, "", "$schema") != Schema)
         {
@@ -49,7 +54,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
     }
 
     /// <summary>Takes the view apart and puts each piece through the checks <see cref="Parse"/> promises.</summary>
-    private sealed class Reader(RuleContext context)
+    private sealed class Reader(RuleContext context, JsonNode? rules)
     {
         private readonly HashSet<string> projections = [.. context.Projections];
         private readonly HashSet<string> inputs = [.. context.Inputs];
@@ -99,8 +104,18 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
                 case "actions":
                     Keys(block, at, "c", "showWhen", "title", "inputs");
                     return new Actions(OptionalString(block, at, "title"), Inputs(block, at), showWhen);
+                case "board":
+                    Keys(block, at, "c", "showWhen", "title", "bind", "play", "pieces");
+                    Binding board = RequiredBinding(block, at, "bind");
+                    return new Board(
+                        OptionalString(block, at, "title"),
+                        board,
+                        Shape(board, $"{at}.bind"),
+                        OptionalString(block, at, "play") is string play ? Play(play, $"{at}.play") : null,
+                        Pieces(block, at),
+                        showWhen);
                 default:
-                    throw new FormatException($"{at}.c: there is no block called \"{kind}\". A view has heading, text, fields, stats, table and actions.");
+                    throw new FormatException($"{at}.c: there is no block called \"{kind}\". A view has heading, text, fields, stats, table, board and actions.");
             }
         }
 
@@ -137,6 +152,49 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
             Keys(column, at, "key", "label");
             string k = String(column, at, "key");
             return new Column(k, OptionalString(column, at, "label") ?? k);
+        }
+
+        // Only a state field can be drawn as a board: the rules give its size nowhere but in its schema.
+        private BoardShape Shape(Binding binding, string at) =>
+            binding.FromState && binding.Path.Count == 0 && BoardShape.Of(rules?["state"]?["schema"]?[binding.Root]) is BoardShape shape
+                ? shape
+                : throw new FormatException($"{at}: a board binds a state field the rules declare with grid.board, such as \"$board\".");
+
+        // "place.at": the input played by choosing a square, and its parameter that takes the square.
+        private SquareMove Play(string text, string at)
+        {
+            string[] parts = text.Split('.');
+            if (parts.Length != 2 || parts.Any(p => p.Length == 0))
+            {
+                throw new FormatException($"{at}: \"{text}\" is not an input and a parameter, such as \"place.at\".");
+            }
+
+            if (!inputs.Contains(parts[0]))
+            {
+                throw new FormatException($"{at}: the rules have no input \"{parts[0]}\". They have {string.Join(", ", inputs)}.");
+            }
+
+            // An input the rules write themselves names its parameters; one they take from elsewhere is not checked here.
+            if (rules?["inputs"]?[parts[0]]?["params"] is JsonObject parameters && !parameters.ContainsKey(parts[1]))
+            {
+                throw new FormatException($"{at}: the input \"{parts[0]}\" has no parameter \"{parts[1]}\". It has {(parameters.Count == 0 ? "none" : string.Join(", ", parameters.Select(p => p.Key)))}.");
+            }
+
+            return new SquareMove(parts[0], parts[1]);
+        }
+
+        private static Dictionary<string, Piece>? Pieces(JsonObject block, string at)
+        {
+            if (block["pieces"] is not JsonNode node)
+            {
+                return null;
+            }
+
+            JsonObject pieces = node as JsonObject ?? throw new FormatException($"{at}.pieces: pieces map values to pieces.");
+            return pieces.ToDictionary(p => p.Key, p =>
+                p.Value is JsonValue value && value.TryGetValue(out string? text) && Enum.GetNames<Piece>().Contains(text)
+                    ? Enum.Parse<Piece>(text)
+                    : throw new FormatException($"{at}.pieces.{p.Key}: a piece is dark, light, accent, ok, warn or danger."));
         }
 
         // "*" is every input; a list names the ones this block offers.
@@ -242,6 +300,24 @@ public sealed record Stat(string Label, Binding Bind);
 public sealed record Table(string? Title, Binding Bind, IReadOnlyList<Column>? Columns, Binding? ShowWhen) : Block(ShowWhen);
 
 public sealed record Column(string Key, string Label);
+
+/// <summary>
+/// A Grid board, square by square. With <see cref="Play"/>, a square that input can be played
+/// on is a button; a value in <see cref="Pieces"/> is drawn as that piece, and any other as text.
+/// </summary>
+public sealed record Board(
+    string? Title,
+    Binding Bind,
+    BoardShape Shape,
+    SquareMove? Play,
+    IReadOnlyDictionary<string, Piece>? Pieces,
+    Binding? ShowWhen) : Block(ShowWhen);
+
+/// <summary>The input a square plays, and the parameter the square goes in.</summary>
+public sealed record SquareMove(string Input, string Parameter);
+
+/// <summary>How a value on a board is drawn: a dark or a light disc, or one in a tone's colour.</summary>
+public enum Piece { dark, light, accent, ok, warn, danger }
 
 /// <summary>The moves of the inputs named, or of every input when <see cref="Inputs"/> is null.</summary>
 public sealed record Actions(string? Title, IReadOnlyList<string>? Inputs, Binding? ShowWhen) : Block(ShowWhen);
