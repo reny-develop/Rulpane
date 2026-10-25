@@ -32,14 +32,16 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
     /// <paramref name="rules"/> is the rule set's document, which <paramref name="context"/>
     /// was compiled from: a board's size is in its state schema, and nowhere else.
     /// <paramref name="bind"/> is the paneset's <c>b</c>: for a name the view reads, where these
-    /// rules keep it — a projection, a path into one, or a state field. Each must be one the view reads.
+    /// rules keep it — a projection, a path into one, a state field, or for a name the view reads
+    /// as an input, one of their inputs. Each must be one the view reads. A tone or a piece the view
+    /// gives one of its own values is given to each value of the rules' that <c>b</c> calls by it.
     /// </summary>
-    public static View Parse(string json, RuleContext context, string rules, IReadOnlyDictionary<string, string>? bind = null)
+    public static View Parse(string json, RuleContext context, string rules, IReadOnlyDictionary<string, Bound>? bind = null)
     {
         JsonObject root = JsonNode.Parse(json, documentOptions: Lenient) as JsonObject
             ?? throw new FormatException("A view is a JSON object.");
 
-        var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient), bind ?? new Dictionary<string, string>());
+        var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient), bind ?? new Dictionary<string, Bound>());
         View view;
         if (root.ContainsKey("expects"))
         {
@@ -51,7 +53,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             view = new View(
                 Reader.OptionalString(root, "", "title"),
                 ReadLayout(root, reader),
-                root["names"] is JsonNode names ? Reader.ReadUncheckedNames(names) : Names.None,
+                root["names"] is JsonNode names ? reader.ReadUncheckedNames(names) : Names.None,
                 reader.Expected);
         }
         else
@@ -111,7 +113,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
     }
 
     /// <summary>Takes the view apart and puts each piece through the checks <see cref="Parse"/> promises.</summary>
-    private sealed class Reader(RuleContext context, JsonNode? rules, IReadOnlyDictionary<string, string> bind)
+    private sealed class Reader(RuleContext context, JsonNode? rules, IReadOnlyDictionary<string, Bound> b)
     {
         private readonly HashSet<string> projections = [.. context.Projections];
         private readonly HashSet<string> inputs = [.. context.Inputs];
@@ -122,33 +124,120 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
         private Dictionary<string, List<string>>? expectedInputs;
         private readonly Dictionary<string, Binding> map = new(StringComparer.Ordinal);
 
-        // The paneset's b, each held to the rules, and which of them the view has read.
-        private Dictionary<string, Binding>? given;
-        private readonly HashSet<string> used = new(StringComparer.Ordinal);
+        // The paneset's b. Whether a name binds a value or an input is how the view reads it, so
+        // each is held to the rules when first read, and remembered as the one or the other.
+        private readonly IReadOnlyDictionary<string, Bound> bind = b.Keys.FirstOrDefault(k => k.Length == 0 || k.Contains('.') || k.StartsWith('$')) is string wrong
+            ? throw new FormatException($"b.{wrong}: what is bound is a name the view reads, such as \"stage\" or \"place\".")
+            : b;
+        private readonly Dictionary<string, Binding> boundValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> boundInputs = new(StringComparer.Ordinal);
 
-        private Dictionary<string, Binding> Given => given ??= bind.ToDictionary(
-            b => b.Key,
-            b => b.Key.Length == 0 || b.Key.Contains('.') || b.Key.StartsWith('$')
-                ? throw new FormatException($"b.{b.Key}: what is bound is a name the view reads, such as \"stage\".")
-                : RuleBinding(b.Value, $"b.{b.Key}"),
-            StringComparer.Ordinal);
+        // Each of b's values the view gave a look to, by the name it was read through.
+        private readonly HashSet<(string Name, string Value)> looked = [];
 
-        /// <summary>Throws for a name in <c>b</c> the view never read: it would bind nothing, and was most likely misspelt.</summary>
+        /// <summary>
+        /// Throws for a name in <c>b</c> the view never read, and for a value of b's the view gives no
+        /// look to: either would change nothing, and was most likely misspelt.
+        /// </summary>
         public void AllBound()
         {
-            foreach (string name in Given.Keys.Where(n => !used.Contains(n)))
+            foreach (string name in bind.Keys.Where(n => !boundValues.ContainsKey(n) && !boundInputs.ContainsKey(n)))
             {
                 throw new FormatException(expectedProjections is null
                     ? $"b.{name}: the view reads no \"{name}\"."
-                    : $"b.{name}: the view expects no \"{name}\". It expects {(expectedProjections.Count == 0 ? "no projections" : string.Join(", ", expectedProjections.Keys))}.");
+                    : $"b.{name}: the view expects no \"{name}\". It expects {(expectedProjections.Count + expectedInputs!.Count == 0 ? "nothing" : string.Join(", ", expectedProjections.Keys.Concat(expectedInputs.Keys)))}.");
             }
+
+            foreach (var (name, bound) in bind)
+            {
+                foreach (var (value, own) in bound.Values.Where(v => !looked.Contains((name, v.Value))))
+                {
+                    throw new FormatException($"b.{name}.values.{value}: the view gives \"{own}\" no tone or piece where it reads \"{name}\", so calling a value by it changes nothing.");
+                }
+            }
+        }
+
+        // Where b keeps a name the view reads as a value; null when b does not bind it.
+        private Binding? BoundValue(string name)
+        {
+            if (!bind.TryGetValue(name, out Bound? bound))
+            {
+                return null;
+            }
+
+            if (boundInputs.ContainsKey(name))
+            {
+                throw new FormatException($"b.{name}: the view reads \"{name}\" both as a value and as an input, so b cannot bind it to one place.");
+            }
+
+            if (!boundValues.TryGetValue(name, out Binding? binding))
+            {
+                binding = RuleBinding(bound.At, bound.Values.Count == 0 ? $"b.{name}" : $"b.{name}.at");
+                boundValues[name] = binding;
+            }
+
+            return binding;
+        }
+
+        // The rules' input b gives for a name the view reads as an input; null when b does not bind it.
+        private string? BoundInput(string name)
+        {
+            if (!bind.TryGetValue(name, out Bound? bound))
+            {
+                return null;
+            }
+
+            if (boundValues.ContainsKey(name))
+            {
+                throw new FormatException($"b.{name}: the view reads \"{name}\" both as a value and as an input, so b cannot bind it to one place.");
+            }
+
+            if (bound.Values.Count > 0)
+            {
+                throw new FormatException($"b.{name}: the view reads \"{name}\" as an input, which has no values to call by other names; bind it to the input alone, as a string.");
+            }
+
+            if (!inputs.Contains(bound.At))
+            {
+                throw new FormatException($"b.{name}: the view reads \"{name}\" as an input, and the rules have no input \"{bound.At}\". They have {string.Join(", ", inputs)}.");
+            }
+
+            boundInputs[name] = bound.At;
+            return bound.At;
+        }
+
+        /// <summary>
+        /// <paramref name="looks"/>, keyed by the view's own values, with each value of the rules'
+        /// that b calls by one of them given its look as well. <paramref name="text"/> is the binding
+        /// as the view wrote it: only a name b binds has values it calls by other names.
+        /// </summary>
+        private Dictionary<string, T> Looks<T>(Dictionary<string, T> looks, string text)
+        {
+            string name = text.Split('.')[0];
+            if (text.StartsWith('$') || !bind.TryGetValue(name, out Bound? bound))
+            {
+                return looks;
+            }
+
+            var all = new Dictionary<string, T>(looks, StringComparer.Ordinal);
+            foreach (var (value, own) in bound.Values)
+            {
+                if (looks.TryGetValue(own, out T? look))
+                {
+                    all[value] = look;
+                    looked.Add((name, own));
+                }
+            }
+
+            return all;
         }
 
         public List<Expected> Expected { get; } = [];
 
         /// <summary>
         /// Reads <c>expects</c> and holds it against the rules: each projection is one they have,
-        /// or one the paneset's <c>b</c> finds for it elsewhere, and each input is one of theirs.
+        /// or one the paneset's <c>b</c> finds for it elsewhere, and each input is one of theirs,
+        /// under its own name or the one <c>b</c> gives.
         /// </summary>
         public void Expect(JsonNode? node)
         {
@@ -170,18 +259,10 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
 
             foreach (var (name, type) in expectedProjections)
             {
-                if (Given.TryGetValue(name, out Binding? found))
-                {
-                    used.Add(name);
-                }
-                else if (projections.Contains(name))
-                {
-                    found = new Binding(false, name, []);
-                }
-                else
-                {
-                    throw new FormatException($"expects.projections.{name}: the rules project no \"{name}\". {(projections.Count == 0 ? "They project nothing" : $"They project {string.Join(", ", projections)}")}; the paneset's b can bind it to what they have.");
-                }
+                Binding found = BoundValue(name)
+                    ?? (projections.Contains(name)
+                        ? new Binding(false, name, [])
+                        : throw new FormatException($"expects.projections.{name}: the rules project no \"{name}\". {(projections.Count == 0 ? "They project nothing" : $"They project {string.Join(", ", projections)}")}; the paneset's b can bind it to what they have."));
 
                 map[name] = found;
                 if (type.Kind == Kind.Board && BoardShapeOf(found) is null)
@@ -194,14 +275,15 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
 
             foreach (var (input, parameters) in expectedInputs)
             {
-                if (!inputs.Contains(input))
+                string theirs = BoundInput(input) ?? input;
+                if (!inputs.Contains(theirs))
                 {
-                    throw new FormatException($"expects.inputs.{input}: the rules have no input \"{input}\". They have {string.Join(", ", inputs)}.");
+                    throw new FormatException($"expects.inputs.{input}: the rules have no input \"{input}\". They have {string.Join(", ", inputs)}; the paneset's b can bind it to one of them.");
                 }
 
                 foreach (string parameter in parameters)
                 {
-                    CheckParameter(input, parameter, $"expects.inputs.{input}");
+                    CheckParameter(theirs, parameter, $"expects.inputs.{input}");
                 }
             }
         }
@@ -220,15 +302,12 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
 
         // Inputs and parameters are the rules' own and are checked against them; the codes come
         // from the plugins and the values from the state, so neither can be listed in advance.
+        // An input is named as the view reads it, and the name goes to the one b binds it to.
         public Names ReadNames(JsonNode node)
         {
             JsonObject names = node as JsonObject ?? throw new FormatException("names: names is an object of inputs, params, codes and values.");
             Keys(names, "names", "inputs", "params", "codes", "values");
-            var given = Map(names, "inputs");
-            foreach (string input in given.Keys.Where(i => !inputs.Contains(i)))
-            {
-                throw new FormatException($"names.inputs.{input}: the rules have no input \"{input}\". They have {string.Join(", ", inputs)}.");
-            }
+            var given = Map(names, "inputs").ToDictionary(i => Input(i.Key, $"names.inputs.{i.Key}"), i => i.Value);
 
             var parameters = Map(names, "params");
             // A parameter can be checked only when every input is one the rules write themselves.
@@ -244,11 +323,13 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             return new Names(given, parameters, Map(names, "codes"), Map(names, "values"));
         }
 
-        public static Names ReadUncheckedNames(JsonNode node)
+        // A view with expects names an input it expects as it reads it, and the name goes to the one b binds it to.
+        public Names ReadUncheckedNames(JsonNode node)
         {
             JsonObject names = node as JsonObject ?? throw new FormatException("names: names is an object of inputs, params, codes and values.");
             Keys(names, "names", "inputs", "params", "codes", "values");
-            return new Names(Map(names, "inputs"), Map(names, "params"), Map(names, "codes"), Map(names, "values"));
+            var given = Map(names, "inputs").ToDictionary(i => boundInputs.GetValueOrDefault(i.Key, i.Key), i => i.Value);
+            return new Names(given, Map(names, "params"), Map(names, "codes"), Map(names, "values"));
         }
 
         private static Dictionary<string, string> Map(JsonObject names, string key)
@@ -311,7 +392,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                         board,
                         BoardShapeOf(board) ?? throw new FormatException($"{at}.bind: a board binds a state field the rules declare with grid.board, such as \"$board\"."),
                         OptionalString(block, at, "play") is string play ? Play(play, $"{at}.play") : null,
-                        Pieces(block, at),
+                        Pieces(block, at) is { } pieces ? Looks(pieces, String(block, at, "bind")) : null,
                         showWhen);
                 default:
                     throw new FormatException($"{at}.c: there is no block called \"{kind}\". A view has heading, text, fields, stats, list, table, board and actions.");
@@ -329,7 +410,11 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                 tones = tone.ToDictionary(t => t.Key, t => ReadTone(t.Value, $"{at}.tone.{t.Key}"));
             }
 
-            return new Row(String(row, at, "label"), RequiredBinding(row, at, "bind"), tones, OptionalBinding(row, at, "showWhen", Kind.Bool));
+            return new Row(
+                String(row, at, "label"),
+                RequiredBinding(row, at, "bind"),
+                tones is null ? null : Looks(tones, String(row, at, "bind")),
+                OptionalBinding(row, at, "showWhen", Kind.Bool));
         }
 
         private Stat ReadStat(JsonNode? node, string at)
@@ -367,28 +452,32 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                 throw new FormatException($"{at}: \"{text}\" is not an input and a parameter, such as \"place.at\".");
             }
 
-            Input(parts[0], at);
+            string input = Input(parts[0], at);
             if (expectedInputs is not null && !expectedInputs[parts[0]].Contains(parts[1]))
             {
                 throw new FormatException($"{at}: the view expects no parameter \"{parts[1]}\" of \"{parts[0]}\". Add it to expects.inputs.{parts[0]}.");
             }
 
-            CheckParameter(parts[0], parts[1], at);
-            return new SquareMove(parts[0], parts[1]);
+            CheckParameter(input, parts[1], at);
+            return new SquareMove(input, parts[1]);
         }
 
-        // An input a view with expects names is one it expects, and every input named is one the rules have.
-        private void Input(string name, string at)
+        // An input a view with expects names is one it expects, and every input named is one the
+        // rules have, under its own name or the one b binds it to. Returns the rules' name for it.
+        private string Input(string name, string at)
         {
             if (expectedInputs is not null && !expectedInputs.ContainsKey(name))
             {
                 throw new FormatException($"{at}: the view expects no input \"{name}\". {(expectedInputs.Count == 0 ? "It expects none" : $"It expects {string.Join(", ", expectedInputs.Keys)}")}; name it in expects.inputs.");
             }
 
-            if (!inputs.Contains(name))
+            string theirs = BoundInput(name) ?? name;
+            if (!inputs.Contains(theirs))
             {
-                throw new FormatException($"{at}: the rules have no input \"{name}\". They have {string.Join(", ", inputs)}.");
+                throw new FormatException($"{at}: the rules have no input \"{name}\". They have {string.Join(", ", inputs)}; the paneset's b can bind it to one of them.");
             }
+
+            return theirs;
         }
 
         // An input the rules write themselves names its parameters; one they take from elsewhere is not checked here.
@@ -414,7 +503,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                     : throw new FormatException($"{at}.pieces.{p.Key}: a piece is dark, light, accent, ok, warn or danger."));
         }
 
-        // "*" is every input; a list names the ones this block offers.
+        // "*" is every input; a list names the ones this block offers, as the rules call them.
         private IReadOnlyList<string>? Inputs(JsonObject block, string at)
         {
             if (block["inputs"] is JsonValue all && all.TryGetValue(out string? star) && star == "*")
@@ -422,14 +511,8 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                 return null;
             }
 
-            var names = Each(block, at, "inputs", (n, a) =>
-                n is JsonValue v && v.TryGetValue(out string? name) ? name : throw new FormatException($"{a}: an input is named by a string."));
-            foreach (var (name, i) in names.Select((n, i) => (n, i)))
-            {
-                Input(name, $"{at}.inputs[{i}]");
-            }
-
-            return names;
+            return Each(block, at, "inputs", (n, a) =>
+                n is JsonValue v && v.TryGetValue(out string? name) ? Input(name, a) : throw new FormatException($"{a}: an input is named by a string."));
         }
 
         private static Tone ReadTone(JsonNode? node, string at) =>
@@ -492,9 +575,8 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
         {
             string text = OptionalString(parent, at, key) ?? throw new FormatException($"{Join(at, key)}: missing.");
             Binding binding = Binding.Parse(text, Join(at, key));
-            if (!binding.FromState && Given.TryGetValue(binding.Root, out Binding? bound))
+            if (!binding.FromState && BoundValue(binding.Root) is Binding bound)
             {
-                used.Add(binding.Root);
                 return bound with { Path = [.. bound.Path, .. binding.Path] };
             }
 

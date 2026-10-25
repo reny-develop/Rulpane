@@ -106,7 +106,7 @@ The labels a view writes are its own, but the rules' names reach the screen too:
 | `codes` | Not checked: codes come from plugins as well as from the rules |
 | `values` | Not checked: values come from the state. A value is looked up by the text the screen would show, so a number can be named too |
 
-A name the view leaves out is shown as the rules spell it. A `tone` and a board's `pieces` still key on the value the rules hold, not on its name. The screen without a view shows every name as it is.
+A name the view leaves out is shown as the rules spell it. A `tone` and a board's `pieces` still key on the value the rules hold, not on its name (or on the value the paneset's `b` calls it by; see [Bindings](#bindings)). The screen without a view shows every name as it is.
 
 ### Expects
 
@@ -136,19 +136,26 @@ A view may say what it reads, in `expects`: the projections, each with a type, a
 | `board` | A Grid board: a state field the rules declare with `grid.board`, which no projection can be. Only the whole of a type can be one |
 | `T?` | `T`, or null |
 
-Its bindings are checked against its types before any rules are seen, so a row cannot bind a key the record does not have, a `list` block a string, or a `showWhen` anything but a `bool`. When it is opened, every projection it expects must be one the rules have and every input one they offer, and at every position each value the rules give must be of its type; a value that is not stops the screen with the projection that failed. Its `names` are not checked against any rules. An input it expects is matched by its name alone.
+Its bindings are checked against its types before any rules are seen, so a row cannot bind a key the record does not have, a `list` block a string, or a `showWhen` anything but a `bool`. When it is opened, every projection it expects must be one the rules have and every input one they offer, and at every position each value the rules give must be of its type; a value that is not stops the screen with the projection that failed. Its `names` are not checked against any rules. An input it expects is matched by its name, or by the one the paneset's `b` binds it to.
 
 The bundled views that say what they expect are `stages` (a stage and the moves), `progress` (the items done and all of them, from a checklist or a sign-off) and `grid-game` (a board played by choosing a square).
 
 ### Bindings
 
-Rules that keep what a view reads under another name are matched to it by `b`: for each name the view reads, where these rules keep it — another projection, a path into one, or a state field. A name it leaves out is read as it is. `b` goes in the paneset, or in the link packed as `z:`, never in the view, so one view serves any rules without a copy of it per rule set.
+Rules that keep what a view reads under another name are matched to it by `b`: for each name the view reads, where these rules keep it. A name the view reads as a value goes to another projection, a path into one, or a state field; a name it reads as an input — in `expects.inputs`, an `actions` list, a board's `play` or `names.inputs` — goes to one of the rules' inputs, such as the `game.place` a rule set holding a game offers. Which of the two a name is follows from how the view reads it, and one it reads both ways cannot be bound. A name `b` leaves out is read as it is. `b` goes in the paneset, or in the link packed as `z:`, never in the view, so one view serves any rules without a copy of it per rule set.
 
 ```jsonc
 "b": { "board": "$board", "turn": "$turn" }   // reversi keeps both in its state
+"b": { "turn": "$game.turn", "place": "game.place" }   // a value and an input of a held game
 ```
 
-Each name in `b` must be one the view reads, and each binding must name what the rules have; either is refused when the link is opened. It works the same for a view with `expects` and for one without, whose bindings it renames before they are checked.
+A value can also be written as an object, whose `values` says what the view calls each of the rules' values: a `tone` or a board's `pieces` the view gives its own value goes to each value of the rules' called by it. The screen still shows the rules' value, and `names.values` still names it.
+
+```jsonc
+"b": { "board": { "at": "$board", "values": { "x": "black", "o": "white" } } }   // tic-tac-toe's marks as grid-game's pieces
+```
+
+Each name in `b` must be one the view reads, each binding must name what the rules have, and each value in `values` must be one the view gives a tone or a piece where it reads that name; any of them is refused when the link is opened. An input is bound by its name alone: its parameters keep theirs. It works the same for a view with `expects` and for one without, whose bindings it renames before they are checked.
 
 ## Panesets
 

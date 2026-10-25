@@ -1,8 +1,9 @@
 {
   "$schema": "rulpane/paneset/v1",
   // The turn is a projection of the name the view reads, so only the board is bound: no rules
-  // can project a board, so a board is always a state field.
+  // can project a board, so a board is always a state field. The view draws black and white
+  // as pieces, and the marks are called by them, so each is drawn as a piece too.
   "r": "tictactoe",
   "v": "grid-game",
-  "b": { "board": "$board" }
+  "b": { "board": { "at": "$board", "values": { "x": "black", "o": "white" } } }
 }
