@@ -1,26 +1,37 @@
 @using System.Text.Json.Nodes
 @using Rulealize
+@using Rulealize.Abstraction.Value
 @* A move still waiting for values nobody enumerated — typed by the person in front of the screen. *@
 
 <form class="move-form" @onsubmit="Submit">
     @foreach (OpenParameter parameter in Move.Open)
     {
-        <label>
-            <span>@parameter.Name</span>
-            <input @bind="values[parameter.Name]" placeholder="@parameter.Op" />
-            @if (parameter.Description is not null)
+        string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
+        <label class="field @(codes.Length > 0 ? "invalid" : null)">
+            <span class="label">@parameter.Name <span class="chip">@Kind(parameter)</span></span>
+            <input @bind="values[parameter.Name]" placeholder="@Kind(parameter)" aria-invalid="@(codes.Length > 0)" />
+            @foreach (string refusal in codes)
             {
-                <small>@parameter.Description</small>
+                <span class="rejection"><Icon Name="alert" Size="14" /><code>@refusal</code> refused by the rules</span>
+            }
+            @if (parameter.Description is { Fields.Count: > 0 } bounds)
+            {
+                <small>@Bounds(bounds)</small>
             }
         </label>
     }
-    <button type="submit">@Label</button>
+    <div>
+        <button type="submit" class="primary move"><Icon Name="arrow" />@Label</button>
+    </div>
 </form>
 
 @code {
     [Parameter, EditorRequired] public ValidInput Move { get; set; } = default!;
     [Parameter, EditorRequired] public string Label { get; set; } = default!;
     [Parameter] public EventCallback<IReadOnlyDictionary<string, JsonNode?>> OnSubmit { get; set; }
+
+    /// <summary>The codes the rules answered the last attempt with, by the parameter they are about.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
 
     private readonly Dictionary<string, string> values = new();
 
@@ -37,6 +48,18 @@
         var typed = Move.Open.ToDictionary(p => p.Name, p => (JsonNode?)Convert(p, values[p.Name]));
         return OnSubmit.InvokeAsync(typed);
     }
+
+    // The bounds as the document writes them: "min 1 · max 100000".
+    private static string Bounds(RecordValue bounds) =>
+        string.Join(" · ", bounds.Fields.Select(f => $"{f.Key} {Display.Unquote(f.Value.GetCanonicalText() ?? "null")}"));
+
+    // The schema node's name without its plugin, which is all a person filling it in needs.
+    private static string Kind(OpenParameter parameter) => parameter.Op switch
+    {
+        null => "value",
+        string op when op.StartsWith("type.", StringComparison.Ordinal) => op["type.".Length..],
+        string op => op,
+    };
 
     // The admitting schema node says what kind of value it takes; anything else is text.
     private static JsonNode Convert(OpenParameter parameter, string text) => parameter.Op switch

@@ -7,14 +7,24 @@
 @inject IJSRuntime JS
 
 <header class="bar">
-    <a class="brand" href="@BaseUri">Rulpane</a>
+    <a class="brand" href="@BaseUri">
+        <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+            <rect width="22" height="22" rx="6" fill="var(--color-accent)" />
+            <rect x="5" y="5" width="5" height="12" rx="1.5" fill="var(--color-accent-text)" />
+            <rect x="12" y="5" width="5" height="5" rx="1.5" fill="var(--color-accent-text)" fill-opacity="0.55" />
+            <rect x="12" y="12" width="5" height="5" rx="1.5" fill="var(--color-accent-text)" />
+        </svg>
+        Rulpane
+    </a>
     @if (session is not null)
     {
-        <span class="ruleset">@session.Context.RuleSet</span>
-        <span class="spacer"></span>
-        <button class="ghost" @onclick="Restart">Start over</button>
-        <button class="ghost" @onclick="CopyLink">@(copied ? "Copied" : "Copy link")</button>
+        <span class="crumb">@Id</span>
     }
+    <span class="spacer"></span>
+    <nav class="bar-links">
+        <a class="button ghost small" href="@BaseUri">Samples</a>
+        <a class="button ghost small" href="@(BaseUri + "#" + MakeFragment)"><Icon Name="code" Size="14" />Make a link</a>
+    </nav>
 </header>
 
 <main>
@@ -24,101 +34,100 @@
     }
     else if (error is not null)
     {
-        <section class="card error">
-            <h2>This link cannot be opened</h2>
-            <pre>@error</pre>
-            <a href="@BaseUri">Back to the start</a>
+        <section class="card failure">
+            <span class="failure-icon"><Icon Name="alert" Size="20" /></span>
+            <h1>This link cannot be opened</h1>
+            <p>Rulpane could not read the rules it names. Nothing was run.</p>
+            <pre><strong>@error.Value.Type</strong>@error.Value.Message</pre>
+            <div class="actions">
+                <a class="button primary" href="@BaseUri"><Icon Name="back" />Back to the start</a>
+                <button @onclick="CopyError"><Icon Name="@(copied ? "check" : "copy")" />@(copied ? "Copied" : "Copy details")</button>
+            </div>
         </section>
     }
     else if (session is null)
     {
-        <Landing BaseUri="@BaseUri" Samples="Samples" Runtime="Runtime" />
+        <Landing BaseUri="@BaseUri" Runtime="Runtime" FocusEditor="@(loadedFragment == MakeFragment)" />
     }
     else
     {
-        @if (source is { IsBundled: false })
-        {
-            <p class="notice">This page is generated from rules embedded in the link. Its author has not been verified.</p>
-        }
+        <div class="play">
+            @* Pinned on a narrow screen, so the moves never scroll away under a long view. *@
+            <div class="pinned">
+                <header class="play-head">
+                    <div class="titles">
+                        <div class="title-row">
+                            <h1>@Id</h1>
+                            @if (terminal.IsTerminal)
+                            {
+                                <span class="chip ok dot">Finished</span>
+                            }
+                            else
+                            {
+                                <span class="chip accent dot">In progress</span>
+                            }
+                        </div>
+                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? "bundled" : "embedded in the link")</span>
+                    </div>
+                    <div class="actions">
+                        <button @onclick="Restart" title="Start over"><Icon Name="restart" /><span class="label">Start over</span></button>
+                        <button @onclick="CopyLink" title="Copy link"><Icon Name="@(copied ? "check" : "link")" /><span class="label">@(copied ? "Copied" : "Copy link")</span></button>
+                    </div>
+                </header>
 
-        @if (terminal.IsTerminal)
-        {
-            <section class="card terminal">
-                <h2>Finished</h2>
-                <p>Result: <strong>@terminal.Result</strong></p>
-            </section>
-        }
+                @if (source is { IsBundled: false })
+                {
+                    <p class="notice"><Icon Name="shield" />These rules came in the link. Nobody has verified who wrote them.</p>
+                }
 
-        @if (lastEvent is not null)
-        {
-            <p class="event">@lastEvent</p>
-        }
+                @if (lastMove is not null)
+                {
+                    <p class="last-move">
+                        <span class="chip mark">Last move</span>
+                        <span class="move-text">@lastMove</span>
+                        @if (lastDraws.Length > 0)
+                        {
+                            <span class="drew"><Icon Name="dice" Size="14" />drew @string.Join(", ", lastDraws)</span>
+                        }
+                        <span class="undo"><Icon Name="back" Size="14" />Back to undo</span>
+                    </p>
+                }
 
-        <div class="columns">
-            <div class="column">
+                @if (terminal.IsTerminal)
+                {
+                    <section class="side result">
+                        <div class="result-head"><Icon Name="flag" />The rules have ended</div>
+                        <div class="result-value">
+                            <span class="key">result</span>
+                            <span class="value">@(terminal.Result is null ? "—" : Display.Unquote(terminal.Result))</span>
+                        </div>
+                        <p>No moves are left. Share the link to hand over the finished position.</p>
+                    </section>
+                }
+                else if (moves is not null)
+                {
+                    <MovePanel Moves="moves" OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
+                }
+            </div>
+
+            <div class="view">
                 @if (projections.Count > 0)
                 {
                     @foreach (var (name, value) in projections)
                     {
                         <section class="card">
-                            <h2>@name</h2>
-                            <ValueView Value="value" />
+                            <div class="card-head"><h2 class="mono">@name</h2><span class="chip">projection</span></div>
+                            <ValueView Value="value" Top="true" />
                         </section>
                     }
                 }
                 else
                 {
                     <section class="card">
-                        <h2>State</h2>
-                        <ValueView Value="session.Data" />
+                        <div class="card-head"><h2>State</h2><span class="chip">no projections</span><span class="meta">shown as it is</span></div>
+                        <ValueView Value="session.Data" Top="true" />
                     </section>
                 }
-            </div>
-
-            <div class="column actions">
-                <section class="card">
-                    <h2>Moves</h2>
-                    @if (moves is null || moves.Count == 0)
-                    {
-                        <p class="muted">No moves are available right now.</p>
-                    }
-                    else
-                    {
-                        @foreach (var group in moves.GroupBy(m => (m.Input, m.Actor)))
-                        {
-                            <div class="move-group">
-                                <h3>
-                                    @group.Key.Input
-                                    @if (group.Key.Actor is not null)
-                                    {
-                                        <span class="actor">@group.Key.Actor</span>
-                                    }
-                                </h3>
-                                <div class="moves">
-                                    @foreach (ValidInput move in group)
-                                    {
-                                        if (move.IsComplete)
-                                        {
-                                            <button @onclick="() => Play(move, null)">@ArgumentLabel(move)</button>
-                                        }
-                                        else
-                                        {
-                                            <MoveForm Move="move" Label="@ArgumentLabel(move)" OnSubmit="values => Play(move, values)" />
-                                        }
-                                    }
-                                </div>
-                            </div>
-                        }
-                        @if (moves.Truncated)
-                        {
-                            <p class="muted">Too many candidates: the list stops at @Session.ValidationLimit.</p>
-                        }
-                    }
-                    @if (rejection is not null)
-                    {
-                        <p class="rejection">@rejection</p>
-                    }
-                </section>
             </div>
         </div>
     }
@@ -126,15 +135,20 @@
 
 @code {
     private static readonly RuleRuntime Runtime = CuratedRuntime.Create();
-    private static readonly string[] Samples = ["approval", "countdown", "reversi", "blackjack", "roster"];
+
+    // A fragment with no rules in it shows the start; this one also puts the cursor in the editor.
+    private const string MakeFragment = "make";
 
     // Compiling is the expensive part, and a rule set does not change while its state does.
     private readonly Dictionary<string, RuleContext> compiled = new(StringComparer.Ordinal);
 
     private bool loading = true;
-    private string? error;
+    private (string Type, string Message)? error;
+    private string? lastMove;
+    private string[] lastDraws = [];
+    private ValidInput? refused;
+    private IReadOnlyDictionary<string, string[]>? refusals;
     private string? rejection;
-    private string? lastEvent;
     private bool copied;
     private RuleSource? source;
     private Session? session;
@@ -143,6 +157,9 @@
     private List<(string Name, JsonNode? Value)> projections = [];
 
     private string BaseUri => Nav.BaseUri;
+
+    // The rule set's id: the identity without the version the sub-title already gives.
+    private string Id => session!.Context.RuleSet.Split('@')[0];
 
     private IJSObjectReference? module;
     private IJSObjectReference? listener;
@@ -216,13 +233,14 @@
         // this page last made, so what that move did is no longer what is on screen.
         if (fromOutside)
         {
-            lastEvent = null;
+            lastMove = null;
+            lastDraws = [];
         }
 
         loadedFragment = fragmentText;
         loading = false;
         error = null;
-        rejection = null;
+        ClearRejection();
         copied = false;
         session = null;
 
@@ -250,7 +268,7 @@
         catch (Exception e)
         {
             session = null;
-            error = $"{e.GetType().Name}\n{e.Message}";
+            error = (e.GetType().Name, e.Message);
         }
 
         return true;
@@ -267,18 +285,25 @@
         try
         {
             Outcome outcome = session.Apply(move, open);
-            lastEvent = outcome.Draws.Length > 0
-                ? $"{move} → drew: {string.Join(", ", outcome.Draws)}"
-                : $"{move}";
+            lastMove = Describe(move, open);
+            lastDraws = [.. outcome.Draws];
             next = FragmentFor(Session.PackData(outcome.Result.State));
         }
         catch (InputRejectedException e)
         {
-            rejection = string.Join(" / ", e.Rejections.Select(r => $"{r.Parameter}: {r.Code}").Concat(e.Unexplained));
+            // A refusal about one parameter belongs under its field; the rest go under the moves.
+            refused = move;
+            refusals = e.Rejections
+                .Where(r => r.Parameter is not null)
+                .GroupBy(r => r.Parameter!)
+                .ToDictionary(g => g.Key, g => g.Select(r => r.Code).ToArray());
+            var rest = e.Rejections.Where(r => r.Parameter is null).Select(r => r.Code).Concat(e.Unexplained).ToList();
+            rejection = rest.Count > 0 ? string.Join(" / ", rest) : null;
             return;
         }
         catch (Exception e)
         {
+            ClearRejection();
             rejection = e.Message;
             return;
         }
@@ -286,9 +311,30 @@
         await GoAsync(next);
     }
 
+    // A move with open parameters prints them as still to come; what was played had them typed in.
+    private static string Describe(ValidInput move, IReadOnlyDictionary<string, JsonNode?>? open)
+    {
+        if (open is null)
+        {
+            return move.ToString();
+        }
+
+        var arguments = move.Arguments.Select(a => $"{a.Key}: {Display.Unquote(a.Value)}")
+            .Concat(open.Select(o => $"{o.Key}: {(o.Value is null ? "null" : Display.Unquote(o.Value.ToJsonString()))}"));
+        return $"{move.Input}({string.Join(", ", arguments)})";
+    }
+
+    private void ClearRejection()
+    {
+        refused = null;
+        refusals = null;
+        rejection = null;
+    }
+
     private async Task Restart()
     {
-        lastEvent = null;
+        lastMove = null;
+        lastDraws = [];
         await GoAsync(FragmentFor(null));
     }
 
@@ -308,20 +354,12 @@
         copied = true;
     }
 
-    private string FragmentFor(string? packedData) =>
-        Fragment.Build(("r", source!.Value), ("s", packedData));
-
-    private static string ArgumentLabel(ValidInput move)
+    private async Task CopyError()
     {
-        if (move.Arguments.IsEmpty)
-        {
-            return move.IsComplete ? move.Input : "Submit";
-        }
-
-        return string.Join(", ", move.Arguments.Select(a => $"{a.Key}: {Unquote(a.Value)}"));
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", $"{error!.Value.Type}\n{error.Value.Message}\n{BaseUri}#{loadedFragment}");
+        copied = true;
     }
 
-    // Arguments arrive in their JSON form; a string reads better without its quotes.
-    private static string Unquote(string json) =>
-        json.Length >= 2 && json[0] == '"' && json[^1] == '"' ? JsonNode.Parse(json)!.GetValue<string>() : json;
+    private string FragmentFor(string? packedData) =>
+        Fragment.Build(("r", source!.Value), ("s", packedData));
 }

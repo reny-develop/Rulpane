@@ -23,10 +23,12 @@ The URL is rewritten on every move, so the browser's Back button is an undo, and
 There is no view DSL yet. The screen is generated from the rule set:
 
 - its `projections` are shown if it has any; otherwise the state is shown as it is
-- the results of `GetValidInputs` are shown as buttons, grouped by input
-- an input with `open` parameters is shown as a form
+- the results of `GetValidInputs` are shown as buttons, grouped by actor and then by input; no move is set apart from the others, because the rules do not rank them
+- an input with `open` parameters is shown as a form, and a refusal the rules name against a parameter is shown under its field
 - an input that draws picks one outcome in the browser, weighted by the probabilities from `GetOutcomes`
 - a terminal state shows its result
+
+On a narrow screen the title, the last move and the moves stay pinned while the view scrolls beneath them; on a wide one the moves are a column that stays in view.
 
 ## Plugins
 

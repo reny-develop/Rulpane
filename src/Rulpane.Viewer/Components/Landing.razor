@@ -3,46 +3,118 @@
 @using Rulealize
 @* What a link with nothing in it shows: the bundled samples, and a way to put rules of your own in a link. *@
 
-<section class="card">
-    <h1>Rulpane</h1>
-    <p>A Rulealize rule set carried in a URL, turned into a screen you can operate.</p>
-</section>
+<div class="landing">
+    <section class="hero">
+        <div class="hero-copy">
+            <span class="chip accent">No server · it all runs in your browser</span>
+            <h1>Rules in a link.<br />A screen you can play.</h1>
+            <p>
+                Rulpane turns a Rulealize rule set carried in the URL into a screen: what it shows, the moves
+                it allows, the result it ends on. The rules, the position and every move stay in the link.
+            </p>
+        </div>
 
-<section class="card">
-    <h2>Samples</h2>
-    <ul class="samples">
-        @foreach (string name in Samples)
-        {
-            <li><a href="@(BaseUri + Fragment.Build(("r", name)))">@name</a></li>
-        }
-    </ul>
-</section>
+        <div class="card anatomy">
+            <h2>The whole screen is in the link</h2>
+            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
+            <dl>
+                <dt><span class="chip accent">r</span></dt>
+                <dd>The rule set: a bundled name, or the JSON itself, compressed</dd>
+                <dt><span class="chip ok">s</span></dt>
+                <dd>The position. Left out, the rules start from the beginning</dd>
+            </dl>
+            <p class="note"><Icon Name="back" Size="14" />Every move rewrites the link, so Back is an undo.</p>
+        </div>
+    </section>
 
-<section class="card">
-    <h2>Make a link from your own rules</h2>
-    <textarea @bind="document" @bind:event="oninput" rows="12" placeholder="Paste the rule set JSON"></textarea>
-    <div class="row">
-        <button @onclick="Make">Make link</button>
-    </div>
-    @if (problem is not null)
-    {
-        <pre class="rejection">@problem</pre>
-    }
-    @if (link is not null)
-    {
-        <p><a href="@link">Open @id</a> <span class="muted">(@link.Length characters)</span></p>
-    }
-</section>
+    <section class="section">
+        <div class="section-head">
+            <h2>Samples</h2>
+            <p>Rule sets bundled with Rulpane.</p>
+        </div>
+        <ul class="samples">
+            @foreach (Sample sample in Samples)
+            {
+                <li>
+                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name)))">
+                        <span class="sample-head">@sample.Name<Icon Name="arrow" /></span>
+                        <p>@sample.Description</p>
+                        <span class="tags">
+                            @foreach (string tag in sample.Tags)
+                            {
+                                <span class="chip">@tag</span>
+                            }
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <h2>Make a link from your own rules</h2>
+            <p>Paste a rule set. It is compiled here first, so a link this page hands out is one that opens.</p>
+        </div>
+        <div class="card make">
+            <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
+                      placeholder="Paste the rule set JSON. Comments are dropped from the link."></textarea>
+            <div class="make-row">
+                <button class="primary" @onclick="Make"><Icon Name="link" />Make link</button>
+                @if (link is not null)
+                {
+                    <span class="made"><Icon Name="check" /><a href="@link">Open @id</a><span class="muted">· @link.Length characters</span></span>
+                }
+            </div>
+            @if (problem is not null)
+            {
+                <pre class="problem">@problem</pre>
+            }
+        </div>
+    </section>
+</div>
 
 @code {
+    private sealed record Sample(string Name, string Description, string[] Tags);
+
+    // Each describes the document of the same name in wwwroot/rulesets.
+    private static readonly Sample[] Samples =
+    [
+        new("approval", "Draft, review, then approve or reject with a reason.", ["3 inputs", "projection"]),
+        new("countdown", "Count to ten, one to three at a time.", ["1 input"]),
+        new("reversi", "Reversi on an eight-by-eight board, for two.", ["grid", "actors"]),
+        new("blackjack", "Cards are drawn in your browser, weighted by the rules.", ["chance", "actors"]),
+        new("roster", "A shift roster: put staff on the shifts still open.", ["records"]),
+    ];
+
+    // approval, submitted and waiting for review.
+    private const string ExampleState = "z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE";
+
     [Parameter, EditorRequired] public string BaseUri { get; set; } = default!;
-    [Parameter, EditorRequired] public string[] Samples { get; set; } = default!;
     [Parameter, EditorRequired] public RuleRuntime Runtime { get; set; } = default!;
 
+    /// <summary>Whether the link asked for the editor, as the bar's "Make a link" does.</summary>
+    [Parameter] public bool FocusEditor { get; set; }
+
+    private ElementReference editor;
+    private bool focused;
     private string document = "";
     private string? problem;
     private string? link;
     private string? id;
+
+    private string Host => new Uri(BaseUri).Host + new Uri(BaseUri).AbsolutePath;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (FocusEditor && !focused)
+        {
+            focused = true;
+            await editor.FocusAsync();
+        }
+
+        focused &= FocusEditor;
+    }
 
     // Compiled before a link is made, so a link this page hands out is one that opens.
     private void Make()

@@ -2,48 +2,91 @@
 @using System.Text.Json.Nodes
 @* A value a rule set answered with, shown by its shape alone: nothing here knows what it means. *@
 
-@switch (Value)
+@if (Top)
 {
-    case null:
-        <span class="null">—</span>
-        break;
-    case JsonObject record when record.Count == 0:
-        <span class="null">{}</span>
-        break;
-    case JsonObject record:
-        <dl class="record">
-            @foreach (var (key, item) in record)
+    @* The outermost record is the card's own rows; anything else is one row of it. *@
+    @if (Value is JsonObject { Count: > 0 } top)
+    {
+        <dl class="rows">
+            @foreach (var (key, item) in top)
             {
-                <dt>@key</dt>
-                <dd><ValueView Value="item" /></dd>
+                <div>
+                    <dt>@key</dt>
+                    <dd><ValueView Value="item" /></dd>
+                </div>
             }
         </dl>
-        break;
-    case JsonArray sequence when sequence.Count == 0:
-        <span class="null">[]</span>
-        break;
-    case JsonArray sequence:
-        <ol class="sequence">
-            @foreach (var item in sequence)
-            {
-                <li><ValueView Value="item" /></li>
-            }
-        </ol>
-        break;
-    case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.True:
-        <span class="bool yes">true</span>
-        break;
-    case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.False:
-        <span class="bool no">false</span>
-        break;
-    case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
-        <span class="text">@(scalar.GetValue<string>())</span>
-        break;
-    default:
-        <span class="number">@Value.ToJsonString()</span>
-        break;
+    }
+    else
+    {
+        <div class="rows single"><div><ValueView Value="Value" /></div></div>
+    }
+}
+else
+{
+    @switch (Value)
+    {
+        case null:
+            <span class="null">—</span>
+            break;
+        case JsonObject record when record.Count == 0:
+            <span class="null">{}</span>
+            break;
+        case JsonObject record:
+            <dl class="record">
+                @foreach (var (key, item) in record)
+                {
+                    <dt>@key</dt>
+                    <dd><ValueView Value="item" /></dd>
+                }
+            </dl>
+            break;
+        case JsonArray sequence when sequence.Count == 0:
+            <span class="null">[]</span>
+            break;
+        case JsonArray sequence when sequence.All(IsScalar):
+            <ol class="chips">
+                @foreach (var item in sequence)
+                {
+                    <li class="chip">@Scalar(item)</li>
+                }
+            </ol>
+            break;
+        case JsonArray sequence:
+            <ol class="sequence @(sequence.Any(i => i is JsonObject) ? "of-records" : null)">
+                @foreach (var item in sequence)
+                {
+                    <li><ValueView Value="item" /></li>
+                }
+            </ol>
+            break;
+        case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.True:
+            <span class="chip ok dot mono">true</span>
+            break;
+        case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.False:
+            <span class="chip dot mono">false</span>
+            break;
+        case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
+            <span class="text">@(scalar.GetValue<string>())</span>
+            break;
+        default:
+            <span class="number">@Value.ToJsonString()</span>
+            break;
+    }
 }
 
 @code {
     [Parameter] public JsonNode? Value { get; set; }
+
+    /// <summary>Whether this is the whole of what a card shows, rather than a part of it.</summary>
+    [Parameter] public bool Top { get; set; }
+
+    private static bool IsScalar(JsonNode? node) => node is null or JsonValue;
+
+    private static string Scalar(JsonNode? node) => node switch
+    {
+        null => "null",
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => v.GetValue<string>(),
+        _ => node.ToJsonString(),
+    };
 }
