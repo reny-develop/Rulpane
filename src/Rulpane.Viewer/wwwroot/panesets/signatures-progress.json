@@ -1,8 +1,0 @@
-{
-  "$schema": "rulpane/paneset/v1",
-  // The same view as the checklist's: who may sign is "all", who has signed is "done".
-  "r": "signatures",
-  "v": "progress",
-  "b": { "all": "signatories", "done": "signed" },
-  "s": { "signatories": ["ann", "bo", "cy"], "required": 2, "signed": [], "outcome": "open" }
-}

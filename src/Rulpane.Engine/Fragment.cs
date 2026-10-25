@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 
 namespace Rulpane.Engine;
 
@@ -12,19 +13,66 @@ public static class Fragment
     /// <summary>Prefix of a value that is deflated and then base64url-encoded.</summary>
     public const string PackedPrefix = "z:";
 
+    /// <summary>
+    /// The keys of a fragment and their values. A value that starts with <c>{</c> is a document
+    /// written as it is, which somebody, or an AI, can type without packing it: it runs to the end
+    /// of its JSON, whatever <c>&amp;</c> or <c>#</c> its strings hold, and is packed here, so
+    /// everything after this reads one form and the link is rewritten short on the first move.
+    /// </summary>
     public static Dictionary<string, string> Parse(string fragment)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (string part in fragment.TrimStart('#').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        string rest = fragment.TrimStart('#');
+        while (rest.Length > 0)
         {
+            int end = rest.IndexOf('&');
+            string part = end < 0 ? rest : rest[..end];
             int separator = part.IndexOf('=');
+            if (separator > 0 && ReadWritten(rest[(separator + 1)..]) is { } written)
+            {
+                values[part[..separator]] = Pack(written.Json);
+                rest = written.After.StartsWith('&') ? written.After[1..] : written.After;
+                continue;
+            }
+
             if (separator > 0)
             {
                 values[part[..separator]] = Uri.UnescapeDataString(part[(separator + 1)..]);
             }
+
+            rest = end < 0 ? "" : rest[(end + 1)..];
         }
 
         return values;
+    }
+
+    /// <summary>How a document written in the link is read: comments and trailing commas are let through.</summary>
+    public static readonly JsonReaderOptions Written = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+
+    // A browser escapes a typed space or quote in a fragment, so the text is unescaped before its
+    // JSON is read. JSON that does not read is left as an ordinary value, for Source to refuse.
+    private static (string Json, string After)? ReadWritten(string value)
+    {
+        string text = Uri.UnescapeDataString(value);
+        if (!text.StartsWith('{'))
+        {
+            return null;
+        }
+
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        var reader = new Utf8JsonReader(bytes, Written);
+        try
+        {
+            reader.Read();
+            reader.Skip();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        int length = (int)reader.BytesConsumed;
+        return (Encoding.UTF8.GetString(bytes, 0, length), Encoding.UTF8.GetString(bytes, length, bytes.Length - length));
     }
 
     public static string Build(params (string Key, string? Value)[] values) =>

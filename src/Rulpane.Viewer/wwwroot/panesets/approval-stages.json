@@ -1,7 +1,0 @@
-{
-  "$schema": "rulpane/paneset/v1",
-  // The stages view on rules that keep the stage under another name: b says where.
-  "r": "approval",
-  "v": "stages",
-  "b": { "stage": "summary.stage" }
-}

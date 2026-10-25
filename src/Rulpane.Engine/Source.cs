@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Rulpane.Engine;
@@ -28,6 +29,7 @@ public sealed partial record Source(string Value, bool IsBundled, string Folder)
 
     public static Source Rules(string value)
     {
+        Unread(value, "rule set");
         if (Registered().IsMatch(value))
         {
             return new Source(value, IsBundled: false, "rulesets");
@@ -50,6 +52,7 @@ public sealed partial record Source(string Value, bool IsBundled, string Folder)
     // A bundled name, one from the Gallery, or one carried in the value.
     private static Source Published(string value, string folder, string noun)
     {
+        Unread(value, noun);
         if (InGallery().IsMatch(value))
         {
             return new Source(value, IsBundled: false, folder);
@@ -63,7 +66,7 @@ public sealed partial record Source(string Value, bool IsBundled, string Folder)
         return Parse(value, folder, noun);
     }
 
-    /// <summary>A bare name is a document shipped with the viewer; <c>z:</c> is one carried in the link.</summary>
+    /// <summary>A bare name is a document shipped with the viewer; <c>z:</c> is one carried in the link, as is one written as JSON, which <see cref="Fragment.Parse"/> has packed.</summary>
     private static Source Parse(string value, string folder, string noun)
     {
         if (value.StartsWith(Fragment.PackedPrefix, StringComparison.Ordinal))
@@ -76,7 +79,29 @@ public sealed partial record Source(string Value, bool IsBundled, string Folder)
             return new Source(value, IsBundled: true, folder);
         }
 
-        throw new FormatException($"'{value}' is neither the name of a bundled {noun} nor a packed one ('{Fragment.PackedPrefix}…').");
+        throw new FormatException($"'{value}' is neither the name of a bundled {noun}, a packed one ('{Fragment.PackedPrefix}…'), nor one written as JSON ('{{…}}').");
+    }
+
+    // JSON that reached here did not read when the fragment was parsed: say why, before the value
+    // is taken for a name.
+    private static void Unread(string value, string noun)
+    {
+        if (!value.StartsWith('{'))
+        {
+            return;
+        }
+
+        try
+        {
+            var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(value), Fragment.Written);
+            while (reader.Read())
+            {
+            }
+        }
+        catch (JsonException exception)
+        {
+            throw new FormatException($"The {noun} written in the link is not JSON that reads: {exception.Message} If the link was cut short, its JSON ends early: write spaces as %20 so nothing cuts it.");
+        }
     }
 
     /// <summary>The identifier and version a registered or Gallery source names.</summary>
