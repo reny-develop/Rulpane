@@ -18,7 +18,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # With every tag, for the versions kept at their own path below.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -33,13 +36,11 @@ jobs:
         run: dotnet run --project tool/Mirror -c Release -- publish/wwwroot/registry
 
       # The Gallery's releases, for a view, a theme or a paneset named <owner>/<name>@<version>.
-      # The Gallery keeps its own copy of each in git, so this reads a checkout of it. While the
-      # Gallery is private that takes RULPANE_GALLERY_READ_TOKEN, a token that can read it.
+      # The Gallery keeps its own copy of each in git, so this reads a checkout of it.
       - uses: actions/checkout@v4
         with:
           repository: reny-develop/Rulpane.Gallery
           path: gallery
-          token: ${{ secrets.RULPANE_GALLERY_READ_TOKEN || github.token }}
 
       - name: Mirror the Gallery
         run: dotnet run --project tool/Mirror -c Release -- --gallery publish/wwwroot/gallery gallery
@@ -51,6 +52,22 @@ jobs:
           base="/${GITHUB_REPOSITORY#*/}/"
           sed -i "s|<base href=\"/\" />|<base href=\"${base}\" />|" publish/wwwroot/index.html
           touch publish/wwwroot/.nojekyll
+
+      # A link made before a breaking change to what a link holds keeps opening at /<repository>/v<n>/:
+      # the commit before that change is tagged site/v<n>, and every deploy builds each such tag
+      # again, with the mirrors taken again, so a version withheld since stops opening there too.
+      - name: Build the versions kept at their own path
+        run: |
+          base="/${GITHUB_REPOSITORY#*/}"
+          for tag in $(git tag --list 'site/v*'); do
+            n="${tag#site/}"
+            git worktree add "work/$n" "$tag"
+            dotnet publish "work/$n/src/Rulpane.Viewer" -c Release -o "work/$n-publish"
+            dotnet run --project "work/$n/tool/Mirror" -c Release -- "work/$n-publish/wwwroot/registry"
+            dotnet run --project "work/$n/tool/Mirror" -c Release -- --gallery "work/$n-publish/wwwroot/gallery" gallery
+            sed -i "s|<base href=\"/\" />|<base href=\"${base}/${n}/\" />|" "work/$n-publish/wwwroot/index.html"
+            mv "work/$n-publish/wwwroot" "publish/wwwroot/$n"
+          done
 
       - uses: actions/upload-pages-artifact@v3
         with:

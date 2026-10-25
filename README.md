@@ -236,4 +236,10 @@ dotnet run --project src/Rulpane.Viewer --launch-profile http   # http://localho
 
 What runs a link, apart from how it is drawn — the curated runtime, the sources a fragment names, and the readers of views and themes — is the library [`src/Rulpane.Engine`](src/Rulpane.Engine/), so that the Gallery reads a submitted view, theme or paneset with the same code the viewer will run it with. The viewer (`src/Rulpane.Viewer`) is the Blazor app around it.
 
-A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions", and while the Gallery is private, a secret `RULPANE_GALLERY_READ_TOKEN` must hold a token that can read it.
+A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
+
+A link stays openable across a breaking change to what a link holds: the commit before that change is tagged `site/v<n>`, and every deploy builds each such tag again, with the Registry and the Gallery mirrored again, at `/v<n>/` beside the current viewer at the root. There is no such tag yet.
+
+## License
+
+Apache-2.0 covers what this repository is made of. Two kinds of file in it come from elsewhere under their own licences, each with a notice beside it: the [bundled rule sets](src/Rulpane.Viewer/wwwroot/rulesets/NOTICE.md), copied from the Rulealize repositories under Apache-2.0, and the [fonts](src/Rulpane.Viewer/wwwroot/fonts/NOTICE.md), Inter and JetBrains Mono under the SIL Open Font License 1.1.
