@@ -494,17 +494,12 @@ main.compact { padding-top: 20px; }
 .hero h1 { font-size: 40px; font-weight: 600; line-height: 1.15; }
 .hero-copy > p { font-size: 16px; line-height: 1.6; color: var(--color-muted); max-width: 500px; }
 
-.anatomy { display: flex; flex-direction: column; gap: 14px; width: 470px; flex: none; padding: 20px; }
-.anatomy h2 { font-size: 13px; font-weight: 600; }
-.anatomy .url { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-sunken); font: 13px var(--font-mono); color: var(--color-muted); overflow-wrap: anywhere; }
-.anatomy .url .r { color: var(--color-accent); font-weight: 600; }
-.anatomy .url .s { color: var(--color-ok); font-weight: 600; }
-.anatomy .url .v { color: var(--color-warn); font-weight: 600; }
-.anatomy .url .t { color: var(--color-text); font-weight: 600; }
-.anatomy dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 10px; align-items: center; margin: 0; font-size: 13px; color: var(--color-muted); }
-.anatomy dt .chip { font-family: var(--font-mono); }
-.anatomy dd { margin: 0; }
-.anatomy .note { display: flex; align-items: center; gap: 8px; padding-top: 14px; border-top: 1px solid var(--color-line); font-size: 12px; color: var(--color-muted); }
+.ask { display: flex; flex-direction: column; gap: 14px; width: 470px; flex: none; padding: 20px; scroll-margin-top: 80px; }
+.ask h2 { font-size: 13px; font-weight: 600; }
+.ask input { width: 100%; }
+.ask .prompt { padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-sunken); font: 13px/1.55 var(--font-mono); color: var(--color-muted); overflow-wrap: anywhere; }
+.ask .note { display: flex; align-items: flex-start; gap: 8px; padding-top: 14px; border-top: 1px solid var(--color-line); font-size: 12px; color: var(--color-muted); }
+.ask .note .icon { flex: none; margin-top: 2px; }
 
 .section { display: flex; flex-direction: column; gap: 14px; }
 .section-head h2 { font-size: 18px; font-weight: 600; }
@@ -512,8 +507,11 @@ main.compact { padding-top: 20px; }
 
 .samples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
 .sample { display: flex; flex-direction: column; gap: 10px; height: 100%; padding: 18px; color: var(--color-text); }
-.sample:hover { text-decoration: none; border-color: var(--color-accent); }
-.sample-head { display: flex; align-items: center; font: 600 15px var(--font-mono); }
+.sample-head { display: flex; align-items: center; font-size: 15px; font-weight: 600; color: var(--color-text); }
+.sample-head:hover { text-decoration: none; color: var(--color-accent); }
+.sample .tags button.chip { padding: 2px 8px; border: 0; border-radius: var(--radius-pill); background: var(--color-sunken); font-size: 12px; cursor: pointer; }
+.sample .tags button.chip:hover { color: var(--color-accent); }
+#make { scroll-margin-top: 80px; }
 .sample-head .icon { margin-left: auto; color: var(--color-accent); }
 .sample p { font-size: 13px; color: var(--color-muted); }
 .sample .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
@@ -526,7 +524,6 @@ main.compact { padding-top: 20px; }
     border-color: var(--color-line);
     font: 12.5px/1.5 var(--font-mono);
 }
-.make .view-editor { min-height: 90px; }
 .make-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .made { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--color-ok); }
 .made a { color: var(--color-accent); }
@@ -612,7 +609,7 @@ main.compact { padding-top: 20px; }
     .hero { flex-direction: column; align-items: stretch; gap: 24px; }
     .hero h1 { font-size: 30px; }
     .hero-copy > p { font-size: 15px; }
-    .anatomy { width: auto; }
+    .ask { width: auto; }
     .samples { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 
     .failure { margin: 40px 16px 0; }
@@ -629,5 +626,39 @@ main.compact { padding-top: 20px; }
     color: var(--color-text);
 }
 #blazor-error-ui .dismiss { cursor: pointer; float: right; }
-.sample.unavailable { cursor: default; }
-.sample.unavailable:hover { border-color: var(--color-line); }
+
+/* ── How to write one: static, from doc/guide.md ─────────── */
+
+/* Outside the app, so it is there for a reader that does not run the page. Shown below the
+   start page, and only there. */
+body:has(main .play) #guide, body:has(main .failure) #guide { display: none; }
+.guide {
+    max-width: 1040px;
+    margin: 0 auto 64px;
+    padding: 28px 32px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--color-text);
+    scroll-margin-top: 80px;
+}
+.guide > h1:first-child { margin-top: 0; font-size: 22px; }
+.guide h1, .guide h2, .guide h3, .guide h4 { font-weight: 600; line-height: 1.3; }
+.guide h2 { margin: 36px 0 10px; font-size: 18px; }
+.guide h3 { margin: 26px 0 8px; font-size: 15px; }
+.guide h4 { margin: 20px 0 6px; font-size: 13px; color: var(--color-muted); }
+.guide p, .guide ul, .guide ol { margin: 8px 0; }
+.guide li { margin: 3px 0; }
+.guide code { padding: 1px 4px; border-radius: 4px; background: var(--color-sunken); font: 12.5px var(--font-mono); overflow-wrap: anywhere; }
+.guide pre { margin: 10px 0; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-sunken); overflow-x: auto; }
+.guide pre code { padding: 0; background: none; overflow-wrap: normal; white-space: pre; }
+.guide table { display: block; max-width: 100%; margin: 10px 0; overflow-x: auto; border-collapse: collapse; font-size: 13px; }
+.guide th, .guide td { padding: 6px 10px; border-bottom: 1px solid var(--color-line); text-align: left; vertical-align: top; }
+.guide th { font-weight: 600; color: var(--color-muted); }
+.guide td code { white-space: nowrap; }
+
+@media (max-width: 1080px) {
+    .guide { margin: 0 16px 48px; padding: 20px 16px; }
+}

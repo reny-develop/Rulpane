@@ -2,153 +2,68 @@
 @using System.Text.Json.Nodes
 @using Rulealize
 @inject HttpClient Http
-@* What a link with nothing in it shows: the bundled samples, and a way to put rules of your own in a link. *@
+@inject IJSRuntime JS
+@* What a link with nothing in it shows: what Rulpane is for, a request to give an AI, the panesets
+   to start from, and the editor. How to write one follows, outside the app, in index.html: it is
+   there for anybody — or any AI — that reads the page without running it. *@
 
 <div class="landing">
     <section class="hero">
         <div class="hero-copy">
             <span class="chip accent">@Say("No server · it all runs in your browser", "サーバーなし · すべてブラウザの中で動きます")</span>
-            <h1>@Say("Rules in a link.", "ルールをリンクに。")<br />@Say("A screen you can play.", "そのまま遊べる画面に。")</h1>
+            <h1>@Say("Make a simple system", "リンク１つで")<br />@Say("from one link.", "簡易システムを作る。")</h1>
             <p>
-                @Say("Rulpane turns a Rulealize rule set carried in the URL into a screen: what it shows, the moves it allows, the result it ends on. The rules, the position and every move stay in the link.",
-                     "Rulpane は、URL に載せた Rulealize のルールセットを画面にします。表示する値、できる操作、終わったときの結果まで。ルールも、いまの状態も、これまでの操作もすべてリンクの中にあります。")
+                @Say("Say what can be done, by whom and when — a claim to approve, a checklist, a sign-off, a roster — and Rulpane makes it a screen anyone can use from the link. Where things stand travels in the link too: send it on, and the next person carries on from there.",
+                     "何ができて、誰が、いつするのか。申請と承認、チェックリスト、回覧の署名、シフト表。それを書けば、Rulpane がリンクから誰でも使える画面にします。いまどこまで進んだかもリンクに入るので、次の人に送れば、そこから続けられます。")
             </p>
         </div>
 
-        <div class="card anatomy">
-            <h2>@Say("The whole screen is in the link", "画面のすべてがリンクの中に")</h2>
-            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("t", "paper"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="t">&amp;t=paper</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
-            <dl>
-                <dt><span class="chip accent">r</span></dt>
-                <dd>@Say("The rule set: a bundled name, one from the Registry as ", "ルールセット。同梱のものの名前か、Registry のものなら ")<span class="mono">id@version</span>@Say(", or the JSON itself, compressed", "、または JSON そのものを圧縮したもの")</dd>
-                <dt><span class="chip warn">v</span></dt>
-                <dd>@Say("The view: where each value goes. Left out, the screen is made from the rules", "ビュー。どの値をどこに置くか。省略すると、ルールから画面を作ります")</dd>
-                <dt><span class="chip">t</span></dt>
-                <dd>@Say("The theme: colours, corners and type. Left out, it looks like Rulpane", "テーマ。色、角、書体。省略すると Rulpane の見た目です")</dd>
-                <dt><span class="chip ok">s</span></dt>
-                <dd>@Say("The position. Left out, the rules start from the beginning", "いまの状態。省略すると、ルールの最初から始まります")</dd>
-                <dt><span class="chip">p</span></dt>
-                <dd>@Say("A paneset: r, v, t and s as one document, bundled or from the Gallery. Any of them the link also gives goes over its own", "ペインセット。r・v・t・s を 1 つの文書にまとめたもので、同梱のものか Gallery のもの。リンクに同じキーがあれば、そちらが優先されます")</dd>
-                <dt><span class="chip">b</span></dt>
-                <dd>@Say("Where the rules keep what the view reads, when they call it something else", "ビューが読む名前を、ルールが別の名前で持っているときに、どこにあるかを指定します")</dd>
-            </dl>
-            <p class="note"><Icon Name="back" Size="14" />@Say("Every move rewrites the link, so Back is an undo.", "操作するたびにリンクが書き換わるので、ブラウザの「戻る」がそのまま取り消しになります。")</p>
+        <div id="ask" class="card ask">
+            <h2>@Say("Ask an AI to make one", "AI に作ってもらう")</h2>
+            <input @ref="needInput" @bind="need" @bind:event="oninput" spellcheck="false"
+                   placeholder="@Say("What do you need? e.g. a loan register for the office's laptops", "何が要りますか？　例：事務所のノートパソコンの貸し出し管理")" />
+            <p class="prompt">@Prompt</p>
+            <div class="make-row">
+                <button class="primary" @onclick="CopyPrompt"><Icon Name="@(promptCopied ? "check" : "copy")" />@(promptCopied ? Say("Copied", "コピーしました") : Say("Copy the request", "依頼文をコピー"))</button>
+            </div>
+            <p class="note"><Icon Name="back" Size="14" />@Say("Paste it into any AI that can read web pages. If the link it gives does not open, give it the reason the page shows.", "Web ページを読める AI に貼り付けてください。もらったリンクが開かなければ、画面に出た理由を AI に伝えてください。")</p>
         </div>
     </section>
 
     <section class="section">
         <div class="section-head">
-            <h2>@Say("Samples", "サンプル")</h2>
-            <p>@Say("Rule sets bundled with Rulpane.", "Rulpane に同梱しているルールセットです。")</p>
+            <h2>@Say("Start from one of these", "これを元に始める")</h2>
+            <p>@Say("Each is one paneset — rules, a view and where to start. Open it as it is, or put a copy in the editor below and change what you need.", "どれも 1 つのペインセット（ルール、ビュー、開始状態）です。そのまま開くか、下のエディタにコピーして、必要なところを変えてください。")</p>
         </div>
         <ul class="samples">
-            @foreach (Sample sample in Samples)
+            @foreach (Start start in Starts)
             {
-                <li>
-                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View), ("t", sample.Theme)))">
-                        <span class="sample-head">@sample.Name@(sample.View is null ? null : Say(" + view", " + ビュー"))@(sample.Theme is null ? null : Say(" + theme", " + テーマ"))<Icon Name="arrow" /></span>
-                        <p>@sample.Description</p>
-                        <span class="tags">
-                            @foreach (string tag in sample.Tags)
-                            {
-                                <span class="chip">@tag</span>
-                            }
-                        </span>
-                    </a>
+                <li class="card sample">
+                    <a class="sample-head" href="@(BaseUri + Fragment.Build(("p", start.Name)))">@start.Title<Icon Name="arrow" /></a>
+                    <p>@start.Description</p>
+                    <span class="tags">
+                        <span class="chip mono">p=@start.Name</span>
+                        <button class="chip" @onclick="() => EditCopy(start.Name)">@Say("Edit a copy", "コピーして編集")</button>
+                    </span>
                 </li>
             }
         </ul>
     </section>
 
-    <section class="section">
+    <section id="make" class="section">
         <div class="section-head">
-            <h2>@Say("Panesets", "ペインセット")</h2>
-            <p>@Say("Rules, a view, a theme and where to start, as one document a link names. A view that says what it expects is used with any rules that have it, and b binds what they keep under other names.", "ルール、ビュー、テーマ、開始状態を、リンクが名前で指せる 1 つの文書にまとめたものです。何を読むかを宣言したビューは、それを持つどのルールにも使えます。ルールが別の名前で持っているものは b で結び付けます。")</p>
-        </div>
-        <ul class="samples">
-            @foreach (Sample sample in Panesets)
-            {
-                <li>
-                    <a class="card sample" href="@(BaseUri + Fragment.Build(("p", sample.Name)))">
-                        <span class="sample-head">@sample.Name<Icon Name="arrow" /></span>
-                        <p>@sample.Description</p>
-                        <span class="tags">
-                            @foreach (string tag in sample.Tags)
-                            {
-                                <span class="chip">@tag</span>
-                            }
-                        </span>
-                    </a>
-                </li>
-            }
-        </ul>
-    </section>
-
-    <section class="section">
-        <div class="section-head">
-            <h2>@Say("From the Registry", "Registry から")</h2>
-            <p>@Say("Rule sets published to the Rulealize Registry, by whoever wrote them. A link names one at a version, and what it holds is fetched with it.", "Rulealize Registry に公開されたルールセットで、書いたのはそれぞれの作者です。リンクは 1 つの版を指し、取り込んでいるものも一緒に取ってきます。")</p>
-        </div>
-        @if (registryProblem is not null)
-        {
-            <p class="muted">@registryProblem</p>
-        }
-        else if (registered is null)
-        {
-            <p class="muted">@Say("Loading…", "読み込み中…")</p>
-        }
-        else
-        {
-            <ul class="samples">
-                @foreach (Listed listed in registered)
-                {
-                    <li>
-                        @if (listed.Problem is null)
-                        {
-                            <a class="card sample" href="@(BaseUri + Fragment.Build(("r", listed.Reference)))">
-                                <span class="sample-head">@listed.Entry.Id<Icon Name="arrow" /></span>
-                                <p>@listed.Entry.Description</p>
-                                <span class="tags">
-                                    <span class="chip">@listed.Entry.Latest</span>
-                                    @if (listed.Holds)
-                                    {
-                                        <span class="chip">uses</span>
-                                    }
-                                </span>
-                            </a>
-                        }
-                        else
-                        {
-                            <div class="card sample unavailable">
-                                <span class="sample-head">@listed.Entry.Id</span>
-                                <p>@listed.Entry.Description</p>
-                                <span class="tags"><span class="chip">@listed.Entry.Latest</span><span class="chip warn">@Say("Rulpane cannot run it", "Rulpane では動かせません")</span></span>
-                                <p class="muted">@listed.Problem</p>
-                            </div>
-                        }
-                    </li>
-                }
-            </ul>
-        }
-    </section>
-
-    <section class="section">
-        <div class="section-head">
-            <h2>@Say("Make a link from your own rules", "自分のルールからリンクを作る")</h2>
-            <p>@Say("Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens. A rule set that ", "ルールセットと、あればビューとテーマを貼り付けてください。どれもここで先に確かめるので、このページが渡すリンクは必ず開けます。Registry のルールセットを ")<span class="mono">uses</span>@Say(" one from the Registry gets it from there, so the link carries only what you wrote.", " するルールセットはそこから取ってくるので、リンクに入るのは自分が書いた部分だけです。")</p>
+            <h2>@Say("Write one here", "ここで書く")</h2>
+            <p>@Say("One document holds the whole screen: r the rules, v the view, t the theme, s where to start — each a name or the document itself. It is checked here first, so the link it hands out is one that opens. What an AI wrote can be pasted here too, as the JSON or as the link.", "画面のすべてを 1 つの文書に書きます。r がルール、v がビュー、t がテーマ、s が開始状態で、どれも名前か文書そのものです。ここで先に確かめるので、渡されるリンクは必ず開けます。AI が書いたものも、JSON でもリンクでも、そのまま貼れます。")</p>
         </div>
         <div class="card make">
-            <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
-                      placeholder="@Say("Paste the rule set JSON. Comments are dropped from the link.", "ルールセットの JSON を貼り付けてください。コメントはリンクに入りません。")"></textarea>
-            <textarea class="view-editor" @bind="viewDocument" @bind:event="oninput" rows="4" spellcheck="false"
-                      placeholder="@Say("Optional: a view (rulealize/view/v1). Left empty, the screen is made from the rules.", "任意：ビュー（rulealize/view/v1）。空のままなら、ルールから画面を作ります。")"></textarea>
-            <textarea class="view-editor" @bind="themeDocument" @bind:event="oninput" rows="4" spellcheck="false"
-                      placeholder="@Say("Optional: a theme (rulealize/theme/v1). Left empty, the screen looks like Rulpane.", "任意：テーマ（rulealize/theme/v1）。空のままなら、Rulpane の見た目です。")"></textarea>
+            <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="14" spellcheck="false"
+                      placeholder="@Placeholder"></textarea>
             <div class="make-row">
                 <button class="primary" @onclick="Make"><Icon Name="link" />@Say("Make link", "リンクを作る")</button>
                 @if (link is not null)
                 {
-                    <span class="made"><Icon Name="check" /><a href="@link">@Say($"Open {id}", $"{id} を開く")</a><span class="muted">@Say($"· {link.Length} characters", $"· {link.Length} 文字")</span></span>
+                    <span class="made"><Icon Name="check" /><a href="@link">@Say($"Open {title}", $"{title} を開く")</a><span class="muted">@Say($"· {link.Length} characters", $"· {link.Length} 文字")</span></span>
+                    <button class="small" @onclick="CopyLink"><Icon Name="@(linkCopied ? "check" : "copy")" Size="14" />@(linkCopied ? Say("Copied", "コピーしました") : Say("Copy link", "リンクをコピー"))</button>
                 }
             </div>
             @if (problem is not null)
@@ -160,142 +75,135 @@
 </div>
 
 @code {
-    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null);
+    private sealed record Start(string Name, string Title, string Description);
 
-    // Each describes the document of the same name in wwwroot/rulesets, its view the one in wwwroot/views, and its theme the one in wwwroot/themes.
-    private static readonly Sample[] Samples =
+    // Each is the paneset of the same name in wwwroot/panesets.
+    private static readonly Start[] Starts =
     [
-        new("approval", Say("Draft, review, then approve or reject with a reason.", "下書き、審査、そして承認か、理由を付けて差し戻し。"), [Say("3 inputs", "input 3 つ"), "projection"]),
-        new("countdown", Say("Count to ten, one to three at a time.", "1 回に 1〜3 ずつ、10 まで数える。"), [Say("1 input", "input 1 つ")]),
-        new("reversi", Say("Reversi on an eight-by-eight board, for two.", "8×8 の盤で、2 人で遊ぶリバーシ。"), ["grid", "actors"]),
-        new("blackjack", Say("Cards are drawn in your browser, weighted by the rules.", "カードはブラウザの中で、ルールの重みどおりに引かれます。"), ["chance", "actors"]),
-        new("tictactoe", Say("Three in a row, for two.", "2 人で遊ぶ三目並べ。"), ["grid", "actors"]),
-        new("roster", Say("A shift roster: put staff on the shifts still open.", "シフト表。まだ空いているシフトに人を入れます。"), ["records"]),
-        new("approval", Say("The same rules, laid out by a view: a claim, its stage, the review.", "同じルールをビューで並べたもの。申請、その段階、審査。"), ["view", "showWhen"], View: "approval"),
-        new("countdown", Say("The total set large; the moves under it.", "合計を大きく、その下に操作ボタン。"), ["view", "stats"], View: "countdown"),
-        new("roster", Say("Who is on which shift, as tables, with a block of moves for each input.", "誰がどのシフトに入っているかを表で。操作は input ごとにまとめて。"), ["view", "table"], View: "roster"),
-        new("reversi", Say("The board drawn square by square: choose a square to place there.", "盤をマスごとに描きます。マスを選ぶと、そこに置きます。"), ["view", "board"], View: "reversi"),
-        new("approval", Say("The claim again, on paper: warm colours, a serif, square corners.", "申請をもう一度、紙の上で。暖かい色、セリフ体、角ばった角。"), ["theme"], View: "approval", Theme: "paper"),
-        new("roster", Say("The roster, rounder and closer together, in green.", "シフト表を、丸く、詰めて、緑で。"), ["theme", "compact"], View: "roster", Theme: "meadow"),
+        new("expense-claim", Say("Expense claim", "経費の申請"), Say("Drafted, submitted, then approved or sent back with a reason.", "下書きして申請し、承認されるか、理由を付けて差し戻されます。")),
+        new("onboarding", Say("Onboarding", "入社手続き"), Say("A new starter's steps, ticked off in any order until none are left.", "新しく入る人の手続きを、好きな順に済ませて、残りがなくなれば完了です。")),
+        new("sign-off", Say("Sign-off", "回覧の承認"), Say("Two of three must sign, and one refusal ends it.", "3 人のうち 2 人の署名で決まり、1 人でも断れば終わります。")),
+        new("shift-request", Say("Shift request", "シフトの希望"), Say("Ask for one of the open shifts; it is granted or denied.", "空いているシフトの 1 つを希望し、認められるか断られます。")),
+        new("shift-roster", Say("Shift roster", "シフト表"), Say("Put staff on the shifts still open, within what each can work.", "まだ空いているシフトに、それぞれが入れる範囲で人を入れます。")),
     ];
 
-    // Each is the paneset of the same name in wwwroot/panesets. The official rule sets open with
-    // nothing in them, since what is requested, signed or ticked off is the state's to say, so
-    // their panesets start from the example in each one's repository.
-    private static readonly Sample[] Panesets =
-    [
-        new("request-stages", Say("Rulealize.RuleSet.Request with the stages view, which reads its stage by the very name it projects.", "Rulealize.RuleSet.Request にビュー stages。段階を、ルールが projection しているのと同じ名前で読みます。"), ["stages", Say("official", "公式"), "s"]),
-        new("approval-stages", Say("The same view on the approval rules, which keep the stage in summary.", "同じビューを approval のルールに。こちらは段階を summary に持っています。"), ["stages", "b"]),
-        new("checklist-progress", Say("Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", "Rulealize.RuleSet.Checklist。手順を好きな順に済ませます。リストは state のフィールドです。"), ["progress", Say("official", "公式"), "b $"]),
-        new("signatures-progress", Say("Rulealize.RuleSet.Signatures: the same view, counting who has signed.", "Rulealize.RuleSet.Signatures。同じビューで、署名した人を数えます。"), ["progress", Say("official", "公式"), "b"]),
-        new("tictactoe-grid-game", Say("A board game that projects its turn by the name the view reads; the board is bound to its state field, and its marks are drawn as the view's black and white pieces.", "ビューが読む名前で手番を projection している盤のゲーム。盤は state のフィールドに結び付け、× と ○ をビューの黒と白の石として描きます。"), ["grid-game", "b $", "values"]),
-        new("reversi-grid-game", Say("The same view on reversi, whose board and turn are state fields. Passing is under the board.", "同じビューを reversi に。盤も手番も state のフィールドです。パスは盤の下にあります。"), ["grid-game", "b $"]),
-    ];
-
-    // A registered rule set at its newest version, or why Rulpane cannot run it.
-    private sealed record Listed(Registered Entry, bool Holds, string? Problem)
-    {
-        public string Reference => $"{Entry.Id}@{Entry.Latest}";
-    }
-
-    // approval, submitted and waiting for review.
-    private const string ExampleState = "z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE";
+    private static readonly JsonDocumentOptions Lenient = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
     [Parameter, EditorRequired] public string BaseUri { get; set; } = default!;
     [Parameter, EditorRequired] public RuleRuntime Runtime { get; set; } = default!;
 
-    /// <summary>Whether the link asked for the editor, as the bar's "Make a link" does.</summary>
-    [Parameter] public bool FocusEditor { get; set; }
+    /// <summary>The part of the page the link asked for, as the bar's links do: ask, make or guide.</summary>
+    [Parameter] public string? Focus { get; set; }
 
+    private Opener? opener;
     private ElementReference editor;
-    private bool focused;
+    private ElementReference needInput;
+    private string? focused;
+    private string need = "";
+    private bool promptCopied;
     private string document = "";
-    private string viewDocument = "";
-    private string themeDocument = "";
     private string? problem;
     private string? link;
-    private string? id;
-    private List<Listed>? registered;
-    private string? registryProblem;
+    private string? title;
+    private bool linkCopied;
 
-    private string Host => new Uri(BaseUri).Host + new Uri(BaseUri).AbsolutePath;
+    private string Prompt => Say(
+        $"Read {BaseUri} and make me a Rulpane link for: {(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}",
+        $"{BaseUri} を読んで、次のものを Rulpane のリンクにしてください：{(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}");
 
-    // Each is compiled before it is offered, as a link made below is.
-    protected override async Task OnInitializedAsync()
-    {
-        try
+    private static string Placeholder => """
         {
-            var listed = new List<Listed>();
-            foreach (Registered entry in await Registry.IndexAsync(Http))
-            {
-                try
-                {
-                    Document[] package = await Registry.PackageAsync(Http, entry.Id, entry.Latest);
-                    IReadOnlyList<Document> held = await Registry.HoldsAsync(Http, package[0].Text, package[1..]);
-                    Registry.Compile(Runtime, package[0].Text, held);
-                    listed.Add(new Listed(entry, held.Count > 0, null));
-                }
-                catch (Exception e)
-                {
-                    listed.Add(new Listed(entry, false, e.Message));
-                }
-            }
-
-            registered = listed;
+          "$schema": "rulpane/paneset/v1",
+          "r": { "$schema": "rulealize/ruleset/v1", "id": "…", … },
+          "v": { "$schema": "rulealize/view/v1", "layout": [ … ] },
+          "s": { … }
         }
-        catch (Exception e)
-        {
-            registryProblem = e.Message;
-        }
-    }
+        """;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (FocusEditor && !focused)
+        if (Focus != focused)
         {
-            focused = true;
-            await editor.FocusAsync();
+            focused = Focus;
+            switch (Focus)
+            {
+                case "ask":
+                    await needInput.FocusAsync();
+                    break;
+                case "make":
+                    await editor.FocusAsync();
+                    break;
+                case "guide":
+                    await using (IJSObjectReference module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/fragment.js"))
+                    {
+                        await module.InvokeVoidAsync("reveal", "guide");
+                    }
+                    break;
+            }
         }
-
-        focused &= FocusEditor;
     }
 
-    // Compiled before a link is made, so a link this page hands out is one that opens.
+    private async Task CopyPrompt()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", Prompt);
+        promptCopied = true;
+    }
+
+    private async Task CopyLink()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", link);
+        linkCopied = true;
+    }
+
+    // The paneset with what it names written in place, so the copy shows everything there is to change.
+    private async Task EditCopy(string name)
+    {
+        problem = null;
+        link = null;
+        JsonObject paneset = JsonNode.Parse(await Http.GetStringAsync($"panesets/{name}.json"), documentOptions: Lenient)!.AsObject();
+        foreach (var (key, folder) in new[] { ("r", "rulesets"), ("v", "views"), ("t", "themes") })
+        {
+            if (paneset[key] is JsonValue named && named.TryGetValue(out string? bundled) && System.Text.RegularExpressions.Regex.IsMatch(bundled, "^[a-z0-9][a-z0-9-]*$"))
+            {
+                paneset[key] = JsonNode.Parse(await Http.GetStringAsync($"{folder}/{bundled}.json"), documentOptions: Lenient);
+            }
+        }
+
+        document = paneset.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        await editor.FocusAsync();
+    }
+
+    // Opened here as the link will be, so a link this page hands out is one that opens.
     private async Task Make()
     {
         problem = null;
         link = null;
+        linkCopied = false;
         try
         {
-            RuleContext context = Registry.Compile(Runtime, document, await Registry.HoldsAsync(Http, document));
-            string? view = null;
-            if (!string.IsNullOrWhiteSpace(viewDocument))
+            string text = document.Trim();
+            string fragment;
+            if (text.StartsWith('#') || text.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                View.Parse(viewDocument, context, document);
-                view = Fragment.Pack(Minify(viewDocument));
+                int hash = text.IndexOf('#');
+                fragment = hash < 0 ? throw new FormatException("The link has no '#', so it names nothing to open.") : text[hash..];
+            }
+            else
+            {
+                JsonObject written = JsonNode.Parse(text, documentOptions: Lenient)?.AsObject()
+                    ?? throw new FormatException("Write a paneset: one JSON object.");
+                string key = written["$schema"]?.GetValue<string>() == "rulealize/ruleset/v1" ? "r" : "p";
+                fragment = Fragment.Build((key, Fragment.Pack(written.ToJsonString())));
             }
 
-            string? theme = null;
-            if (!string.IsNullOrWhiteSpace(themeDocument))
-            {
-                Theme.Parse(themeDocument);
-                theme = Fragment.Pack(Minify(themeDocument));
-            }
-
-            id = context.RuleSet;
-            link = BaseUri + Fragment.Build(("r", Fragment.Pack(Minify(document))), ("v", view), ("t", theme));
+            opener ??= new Opener(Http, Runtime);
+            Opened opened = await opener.OpenAsync(Fragment.Parse(fragment));
+            title = opened.View?.Title ?? opened.Session.Context.Id;
+            link = BaseUri + Fragment.Build([.. Fragment.Parse(fragment).Select(p => (p.Key, (string?)p.Value))]);
         }
         catch (Exception e)
         {
             problem = e.Message;
         }
     }
-
-    // Comments are for whoever edits the document; a link only has to run it.
-    private static string Minify(string json) =>
-        JsonNode.Parse(json, documentOptions: new JsonDocumentOptions
-        {
-            CommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-        })!.ToJsonString();
 }

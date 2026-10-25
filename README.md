@@ -1,23 +1,23 @@
 # Rulpane
 
-**Rules in a link, a screen you can play.** Rulpane turns a [Rulealize](https://github.com/reny-develop/Rulealize) rule set carried in a URL into a screen: what it shows, the moves it allows, the result it ends on. The rules, the position and every move stay in the link, so a link is the whole screen — send it, and whoever opens it is where you are. There is no server: everything runs in the browser, from GitHub Pages.
+**Make a simple system from one link.** Rulpane turns one link into a working screen — a request and its approval, a checklist, a sign-off, a loan register, a roster. The link carries the rules (a [Rulealize](https://github.com/reny-develop/Rulealize) rule set), the layout, the look and where things stand, so there is no server, no sign-up and nothing to install: whoever opens the link uses the system, every step rewrites the link, and sending it on hands the system over as it stands. Everything runs in the browser, from GitHub Pages.
 
 **Open it: <https://reny-develop.github.io/Rulpane/>**
 
-## Try it
+## Make one
+
+- **Ask an AI.** Give an AI that can read web pages the site's address and say what you need — "Read https://reny-develop.github.io/Rulpane/ and make me a Rulpane link for a loan register for the office's laptops." The start page builds that request for you. The page carries [how to write one](doc/guide.md) as plain HTML, readable without running it, and the same text is at [`llms.txt`](https://reny-develop.github.io/Rulpane/llms.txt).
+- **Start from one that exists.** The start page's panesets — `expense-claim`, `onboarding`, `sign-off`, `shift-request`, `shift-roster` — open as they are, or go into the editor as a copy with their rules and view written out.
+- **Write it.** The editor on the start page takes one paneset, or a link, checks it the way a link is opened, and hands out the link.
 
 | Link | What it shows |
 | --- | --- |
-| [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | A bundled rule set with no view: the screen is made from the rules |
-| [`#r=approval&v=approval`](https://reny-develop.github.io/Rulpane/#r=approval&v=approval) | The same rules laid out by a view |
-| [`#r=approval&v=approval&t=paper`](https://reny-develop.github.io/Rulpane/#r=approval&v=approval&t=paper) | …and in another theme |
+| [`#p=expense-claim`](https://reny-develop.github.io/Rulpane/#p=expense-claim) | A bundled paneset: rules, view and where to start, named at once |
+| [`#p=expense-claim&t=paper`](https://reny-develop.github.io/Rulpane/#p=expense-claim&t=paper) | The paneset with one of its keys given over |
+| [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | The same rules with no view: the screen is made from the rules |
 | [`#r=approval&s=z:q1Yq…`](https://reny-develop.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE) | The same rules, starting from a position the link carries |
-| [`#r=reversi&v=reversi`](https://reny-develop.github.io/Rulpane/#r=reversi&v=reversi) | A board game for two, played square by square |
-| [`#p=approval-stages`](https://reny-develop.github.io/Rulpane/#p=approval-stages) | A paneset: rules, view and start as one name |
-| [`#p=approval-stages&t=paper`](https://reny-develop.github.io/Rulpane/#p=approval-stages&t=paper) | The paneset with one of its keys given over |
+| [`#p={"$schema":"rulpane/paneset/v1","r":"checklist",…}`](https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":{"all":"$steps","done":"$done"},"s":{"steps":["keys","badge","laptop"],"done":[]}}) | A paneset written into the link as plain JSON, as an AI writes one |
 | [`#r=Rulealize.RuleSet.SignedRequest@1.1.0`](https://reny-develop.github.io/Rulpane/#r=Rulealize.RuleSet.SignedRequest@1.1.0) | A rule set from the Rulealize Registry, at one exact version |
-
-The start page lists every bundled rule set, paneset and Registry rule set, and **makes a link from your own rules**: paste a rule set, and a view and a theme if you have them; they are checked there first, so the link it hands out is one that opens.
 
 ## Where the pieces come from
 
@@ -34,14 +34,14 @@ Everything goes in the fragment (after `#`), which the browser never sends to a 
 
 | Key | Value |
 | --- | --- |
-| `r` | The rule set. A lowercase name is one bundled with the viewer (`wwwroot/rulesets/<name>.json`); `<id>@<version>` is one published to the [Rulealize Registry](https://github.com/reny-develop/Rulealize.Registry), at exactly that version; a value starting with `z:` is JSON, deflated and base64url-encoded |
-| `v` | The view: where each value goes on the screen. A lowercase name is one bundled with the viewer (`wwwroot/views/<name>.json`); `<owner>/<name>@<version>` is one published to the [Gallery](#the-gallery); `z:` is the JSON, packed as for `r`. Omitted, the screen is generated from the rule set |
-| `t` | The theme: how the screen under the bar looks. A bundled name (`wwwroot/themes/<name>.json`), one from the Gallery, or `z:`. Omitted, the screen looks like Rulpane |
-| `s` | The state: only the `data` of the state document, in the `z:` form. Omitted, the rule set starts from its initial state |
-| `b` | Where the rules keep what the view reads, when they call it something else: see [Bindings](#bindings). `z:` only |
-| `p` | A [paneset](#panesets): all of the above as one document. A bundled name (`wwwroot/panesets/<name>.json`), one from the Gallery, or `z:`. Any other key the link gives goes over the paneset's own |
+| `r` | The rule set. A lowercase name is one bundled with the viewer (`wwwroot/rulesets/<name>.json`); `<id>@<version>` is one published to the [Rulealize Registry](https://github.com/reny-develop/Rulealize.Registry), at exactly that version; a value starting with `{` is the JSON itself, and one starting with `z:` is that JSON deflated and base64url-encoded |
+| `v` | The view: where each value goes on the screen. A lowercase name is one bundled with the viewer (`wwwroot/views/<name>.json`); `<owner>/<name>@<version>` is one published to the [Gallery](#the-gallery); `{…}` or `z:` is the JSON, as for `r`. Omitted, the screen is generated from the rule set |
+| `t` | The theme: how the screen under the bar looks. A bundled name (`wwwroot/themes/<name>.json`), one from the Gallery, `{…}` or `z:`. Omitted, the screen looks like Rulpane |
+| `s` | The state: only the `data` of the state document, as `{…}` or `z:`. Omitted, the rule set starts from its initial state |
+| `b` | Where the rules keep what the view reads, when they call it something else: see [Bindings](#bindings). `{…}` or `z:` |
+| `p` | A [paneset](#panesets): all of the above as one document. A bundled name (`wwwroot/panesets/<name>.json`), one from the Gallery, `{…}` or `z:`. Any other key the link gives goes over the paneset's own |
 
-The URL is rewritten on every move, so the browser's Back button is an undo, and sharing the URL hands over the position as it stands.
+A value written as JSON runs to the end of its JSON, whatever `&`, `#` or `=` its strings hold, so it can be typed — by a person or an AI — with nothing encoded but the spaces (`%20`, since a chat cuts a link at a space). Rulpane packs it into the `z:` form, and the URL is rewritten on every move, so the browser's Back button is an undo, and sharing the URL hands over the position as it stands.
 
 ## Rule sets from the Registry
 
@@ -52,8 +52,6 @@ What any rule set holds through `uses` is read from the same copy, however the r
 ```sh
 dotnet run --project tool/Mirror -- src/Rulpane.Viewer/wwwroot/registry   # for a local run; the folder is ignored by git
 ```
-
-The start page lists the newest version of each, once it has compiled it; one Rulpane cannot run is listed with the reason.
 
 ## The screen
 
@@ -153,21 +151,21 @@ A view may say what it reads, in `expects`: the projections, each with a type, a
 
 Its bindings are checked against its types before any rules are seen, so a row cannot bind a key the record does not have, a `list` block a string, or a `showWhen` anything but a `bool`. When it is opened, every projection it expects must be one the rules have and every input one they offer, and at every position each value the rules give must be of its type; a value that is not stops the screen with the projection that failed. Its `names` are not checked against any rules. An input it expects is matched by its name, or by the one the paneset's `b` binds it to.
 
-The bundled views that say what they expect are `stages` (a stage and the moves), `progress` (the items done and all of them, from a checklist or a sign-off) and `grid-game` (a board played by choosing a square).
+The bundled views that say what they expect are `stages` (a stage and the moves) and `progress` (the items done and all of them, from a checklist or a sign-off).
 
 ### Bindings
 
 Rules that keep what a view reads under another name are matched to it by `b`: for each name the view reads, where these rules keep it. A name the view reads as a value goes to another projection, a path into one, or a state field; a name it reads as an input — in `expects.inputs`, an `actions` list, a board's `play` or `names.inputs` — goes to one of the rules' inputs, such as the `game.place` a rule set holding a game offers. Which of the two a name is follows from how the view reads it, and one it reads both ways cannot be bound. A name `b` leaves out is read as it is. `b` goes in the paneset, or in the link packed as `z:`, never in the view, so one view serves any rules without a copy of it per rule set.
 
 ```jsonc
-"b": { "board": "$board", "turn": "$turn" }   // reversi keeps both in its state
+"b": { "board": "$board", "turn": "$turn" }   // rules that keep both in their state
 "b": { "turn": "$game.turn", "place": "game.place" }   // a value and an input of a held game
 ```
 
 A value can also be written as an object, whose `values` says what the view calls each of the rules' values: a `tone` or a board's `pieces` the view gives its own value goes to each value of the rules' called by it. The screen still shows the rules' value, and `names.values` still names it.
 
 ```jsonc
-"b": { "board": { "at": "$board", "values": { "x": "black", "o": "white" } } }   // tic-tac-toe's marks as grid-game's pieces
+"b": { "board": { "at": "$board", "values": { "x": "black", "o": "white" } } }   // a game's marks x and o, as a view's black and white pieces
 ```
 
 Each name in `b` must be one the view reads, each binding must name what the rules have, and each value in `values` must be one the view gives a tone or a piece where it reads that name; any of them is refused when the link is opened. An input is bound by its name alone: its parameters keep theirs. It works the same for a view with `expects` and for one without, whose bindings it renames before they are checked.
@@ -186,9 +184,9 @@ A paneset (`rulpane/paneset/v1`) is a screen as one document, to be named by a l
 }
 ```
 
-A link is a paneset written out key by key, so `#r=approval&v=stages&b=…` and `#p=approval-stages` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=approval-stages&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
+A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p=onboarding` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=onboarding&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
 
-The bundled panesets are `request-stages`, `approval-stages`, `checklist-progress`, `signatures-progress`, `tictactoe-grid-game` and `reversi-grid-game`: each shows one of the bundled views above with rules that keep what it reads, some under other names.
+The bundled panesets are `expense-claim`, `onboarding`, `sign-off`, `shift-request` and `shift-roster`: each is a small system as it is, from the bundled rule sets and views above, some binding what the rules keep under other names.
 
 ## The Gallery
 
@@ -269,6 +267,7 @@ To open rule sets from the Registry or releases from the Gallery locally, mirror
 | [`src/Rulpane.Engine`](src/Rulpane.Engine/) | What runs a link, apart from how it is drawn: the curated runtime, the sources a fragment names, the readers of views, themes and panesets. The Gallery reads a submission with this same library, so what it records is what the viewer opens |
 | [`src/Rulpane.Viewer`](src/Rulpane.Viewer/) | The Blazor WebAssembly app around it. `wwwroot/` holds the bundled rule sets, views, themes and panesets |
 | [`tool/Mirror`](tool/Mirror/) | Copies the Registry's rule sets and the Gallery's releases beside the viewer |
+| [`tool/Guide`](tool/Guide/) | Writes [`doc/guide.md`](doc/guide.md) — how to write a paneset, for a person or an AI — into `wwwroot/llms.txt` and into `index.html` outside the app, after checking that every operation it lists is one the runtime runs, that it lists them all, and that its examples open and play. Run it after editing the guide; `pages.yml` runs it with `--check` and publishes nothing if the guide is behind or wrong |
 
 A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
 

@@ -27,8 +27,9 @@
     }
     <span class="spacer"></span>
     <nav class="bar-links">
-        <a class="button ghost small" href="@BaseUri">@Say("Samples", "サンプル")</a>
-        <a class="button ghost small" href="@(BaseUri + "#" + MakeFragment)"><Icon Name="code" Size="14" />@Say("Make a link", "リンクを作る")</a>
+        <a class="button ghost small" href="@(BaseUri + "#ask")">@Say("Ask an AI", "AI に頼む")</a>
+        <a class="button ghost small" href="@(BaseUri + "#guide")">@Say("How to write", "書き方")</a>
+        <a class="button ghost small" href="@(BaseUri + "#make")"><Icon Name="code" Size="14" />@Say("Write one", "ここで書く")</a>
     </nav>
 </header>
 
@@ -56,7 +57,7 @@
     }
     else if (session is null)
     {
-        <Landing BaseUri="@BaseUri" Runtime="Runtime" FocusEditor="@(loadedFragment == MakeFragment)" />
+        <Landing BaseUri="@BaseUri" Runtime="Runtime" Focus="@loadedFragment" />
     }
     else
     {
@@ -145,17 +146,9 @@
 @code {
     private static readonly RuleRuntime Runtime = CuratedRuntime.Create();
 
-    // A fragment with no rules in it shows the start; this one also puts the cursor in the editor.
-    private const string MakeFragment = "make";
-
     // Compiling is the expensive part, and a rule set does not change while its state does.
-    private readonly Dictionary<string, RuleContext> compiled = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string Rules, string View, string Bind), View> views = [];
-    private readonly Dictionary<string, Theme> themes = [];
-    private readonly Dictionary<string, Paneset> panesets = new(StringComparer.Ordinal);
-    private readonly Dictionary<Source, string> texts = [];
-    // What each rule set holds through uses, read from the Registry's copy.
-    private readonly Dictionary<string, IReadOnlyList<Document>> holds = new(StringComparer.Ordinal);
+    private Opener opener = default!;
+    private Opened? opened;
 
     private bool loading = true;
     private (string Type, string Message)? error;
@@ -202,7 +195,9 @@
         || new[] { linked.Rules, linked.View, linked.Theme }.Any(v => v?.StartsWith(Fragment.PackedPrefix, StringComparison.Ordinal) == true)
         || linked.Bind.Count > 0;
 
-    private IReadOnlyList<Document> Held => source is null ? [] : holds.GetValueOrDefault(source.Value, []);
+    private IReadOnlyList<Document> Held => opened?.Held ?? [];
+
+    private IReadOnlyDictionary<Source, string> texts => opened!.Texts;
 
     // The rule sets from the Registry this screen runs: the rules themselves, and what they hold.
     private List<string> Published =>
@@ -241,6 +236,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        opener = new Opener(Http, Runtime);
         Nav.LocationChanged += OnLocationChanged;
         await LoadAsync(new Uri(Nav.Uri).Fragment);
     }
@@ -334,82 +330,19 @@
 
         try
         {
-            linked = Paneset.FromLink(fragment);
-            Paneset ground = Paneset.Empty;
-            if (fragment.TryGetValue("p", out string? named))
-            {
-                paneSource = Source.Paneset(named);
-                if (!panesets.TryGetValue(named, out ground!))
-                {
-                    texts[paneSource] = await paneSource.ReadAsync(Http);
-                    ground = Paneset.Parse(texts[paneSource]);
-                    panesets[named] = ground;
-                }
-
-                if (paneSource.IsGallery)
-                {
-                    gallery.Add(await paneSource.PublishedAsync(Http));
-                }
-            }
-
-            Paneset screen = ground.Over(linked);
-            string rules = screen.Rules ?? throw new FormatException("r: the paneset names no rules, and the link gives none.");
-            source = Source.Rules(rules);
-            if (!compiled.TryGetValue(rules, out RuleContext? context))
-            {
-                texts[source] = await source.ReadAsync(Http);
-                holds[rules] = await source.HoldsAsync(Http, texts[source]);
-                context = Registry.Compile(Runtime, texts[source], holds[rules]);
-                compiled[rules] = context;
-            }
-
-            if (screen.View is string layout)
-            {
-                viewSource = Source.View(layout);
-                string bind = screen.Bind.Count == 0 ? "" : Paneset.PackBind(screen.Bind);
-                if (!views.TryGetValue((rules, layout, bind), out view))
-                {
-                    texts[viewSource] = await viewSource.ReadAsync(Http);
-                    view = View.Parse(texts[viewSource], context, texts[source], screen.Bind);
-                    views[(rules, layout, bind)] = view;
-                }
-
-                if (viewSource.IsGallery)
-                {
-                    gallery.Add(await viewSource.PublishedAsync(Http));
-                }
-            }
-            else if (screen.Bind.Count > 0)
-            {
-                throw new FormatException("b: there is no view for it to bind; v names none.");
-            }
-
-            if (screen.Theme is string look)
-            {
-                themeSource = Source.Theme(look);
-                if (!themes.TryGetValue(look, out theme))
-                {
-                    texts[themeSource] = await themeSource.ReadAsync(Http);
-                    theme = Theme.Parse(texts[themeSource]);
-                    themes[look] = theme;
-                }
-
-                if (themeSource.IsGallery)
-                {
-                    gallery.Add(await themeSource.PublishedAsync(Http));
-                }
-            }
-
-            session = Session.Open(context, screen.State);
+            opened = await opener.OpenAsync(fragment);
+            (linked, paneSource, source, viewSource, themeSource, view, theme, session) =
+                (opened.Linked, opened.PaneSource, opened.Rules, opened.ViewSource, opened.ThemeSource, opened.View, opened.Theme, opened.Session);
+            gallery = [.. opened.Gallery];
             terminal = session.Terminal;
             ValidInputSet? valid = terminal.IsTerminal ? null : session.ValidInputs();
             moves = valid?.ToList();
             truncated = valid?.Truncated ?? false;
             projections = session.Context.Projections.ToDictionary(name => name, session.Project);
-            view?.Check(name => projections.GetValueOrDefault(name), session.Data);
         }
         catch (Exception e)
         {
+            opened = null;
             session = null;
             view = null;
             error = (e.GetType().Name, e.Message);

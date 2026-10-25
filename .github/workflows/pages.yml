@@ -27,6 +27,11 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # The guide an AI reads to write a link: every operation it lists is one this runtime runs,
+      # every example opens, and llms.txt and index.html are what doc/guide.md says.
+      - name: Hold the guide to the runtime
+        run: dotnet run --project tool/Guide -c Release -- --check
+
       - run: dotnet publish src/Rulpane.Viewer -c Release -o publish
 
       # The Registry's rule sets, copied from nuget.org to beside the viewer, for r=<id>@<version>

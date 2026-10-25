@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.41.3" />
+    <!-- The viewer's own reader and runtime, so an example passes here only if a link to it opens. -->
+    <ProjectReference Include="../../src/Rulpane.Engine/Rulpane.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

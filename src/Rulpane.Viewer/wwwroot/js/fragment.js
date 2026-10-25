@@ -16,3 +16,8 @@ export function listen(dotnet) {
 export function go(fragment) {
     location.hash = fragment;
 }
+
+// The guide is outside the app, in index.html, so the router does not scroll to it.
+export function reveal(id) {
+    document.getElementById(id)?.scrollIntoView();
+}
