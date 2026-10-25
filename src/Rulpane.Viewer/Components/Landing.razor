@@ -7,42 +7,42 @@
 <div class="landing">
     <section class="hero">
         <div class="hero-copy">
-            <span class="chip accent">No server · it all runs in your browser</span>
-            <h1>Rules in a link.<br />A screen you can play.</h1>
+            <span class="chip accent">@Say("No server · it all runs in your browser", "サーバーなし · すべてブラウザの中で動きます")</span>
+            <h1>@Say("Rules in a link.", "ルールをリンクに。")<br />@Say("A screen you can play.", "そのまま遊べる画面に。")</h1>
             <p>
-                Rulpane turns a Rulealize rule set carried in the URL into a screen: what it shows, the moves
-                it allows, the result it ends on. The rules, the position and every move stay in the link.
+                @Say("Rulpane turns a Rulealize rule set carried in the URL into a screen: what it shows, the moves it allows, the result it ends on. The rules, the position and every move stay in the link.",
+                     "Rulpane は、URL に載せた Rulealize のルールセットを画面にします。表示する値、できる操作、終わったときの結果まで。ルールも、いまの状態も、これまでの操作もすべてリンクの中にあります。")
             </p>
         </div>
 
         <div class="card anatomy">
-            <h2>The whole screen is in the link</h2>
+            <h2>@Say("The whole screen is in the link", "画面のすべてがリンクの中に")</h2>
             <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("t", "paper"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="t">&amp;t=paper</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
             <dl>
                 <dt><span class="chip accent">r</span></dt>
-                <dd>The rule set: a bundled name, one from the Registry as <span class="mono">id@version</span>, or the JSON itself, compressed</dd>
+                <dd>@Say("The rule set: a bundled name, one from the Registry as ", "ルールセット。同梱のものの名前か、Registry のものなら ")<span class="mono">id@version</span>@Say(", or the JSON itself, compressed", "、または JSON そのものを圧縮したもの")</dd>
                 <dt><span class="chip warn">v</span></dt>
-                <dd>The view: where each value goes. Left out, the screen is made from the rules</dd>
+                <dd>@Say("The view: where each value goes. Left out, the screen is made from the rules", "ビュー。どの値をどこに置くか。省略すると、ルールから画面を作ります")</dd>
                 <dt><span class="chip">t</span></dt>
-                <dd>The theme: colours, corners and type. Left out, it looks like Rulpane</dd>
+                <dd>@Say("The theme: colours, corners and type. Left out, it looks like Rulpane", "テーマ。色、角、書体。省略すると Rulpane の見た目です")</dd>
                 <dt><span class="chip ok">s</span></dt>
-                <dd>The position. Left out, the rules start from the beginning</dd>
+                <dd>@Say("The position. Left out, the rules start from the beginning", "いまの状態。省略すると、ルールの最初から始まります")</dd>
             </dl>
-            <p class="note"><Icon Name="back" Size="14" />Every move rewrites the link, so Back is an undo.</p>
+            <p class="note"><Icon Name="back" Size="14" />@Say("Every move rewrites the link, so Back is an undo.", "操作するたびにリンクが書き換わるので、ブラウザの「戻る」がそのまま取り消しになります。")</p>
         </div>
     </section>
 
     <section class="section">
         <div class="section-head">
-            <h2>Samples</h2>
-            <p>Rule sets bundled with Rulpane.</p>
+            <h2>@Say("Samples", "サンプル")</h2>
+            <p>@Say("Rule sets bundled with Rulpane.", "Rulpane に同梱しているルールセットです。")</p>
         </div>
         <ul class="samples">
             @foreach (Sample sample in Samples)
             {
                 <li>
                     <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View), ("t", sample.Theme)))">
-                        <span class="sample-head">@sample.Name@(sample.View is null ? null : " + view")@(sample.Theme is null ? null : " + theme")<Icon Name="arrow" /></span>
+                        <span class="sample-head">@sample.Name@(sample.View is null ? null : Say(" + view", " + ビュー"))@(sample.Theme is null ? null : Say(" + theme", " + テーマ"))<Icon Name="arrow" /></span>
                         <p>@sample.Description</p>
                         <span class="tags">
                             @foreach (string tag in sample.Tags)
@@ -58,8 +58,8 @@
 
     <section class="section">
         <div class="section-head">
-            <h2>Templates</h2>
-            <p>A view written for no one rule set: it says what it expects, and any rules that have it can use it, under their own names.</p>
+            <h2>@Say("Templates", "テンプレート")</h2>
+            <p>@Say("A view written for no one rule set: it says what it expects, and any rules that have it can use it, under their own names.", "どのルールセット向けでもないビューです。何を期待するかを自分で宣言し、それを持つルールなら、ルール自身の名前のままで使えます。")</p>
         </div>
         <ul class="samples">
             @foreach (Sample sample in Templated)
@@ -82,8 +82,8 @@
 
     <section class="section">
         <div class="section-head">
-            <h2>From the Registry</h2>
-            <p>Rule sets published to the Rulealize Registry, by whoever wrote them. A link names one at a version, and what it holds is fetched with it.</p>
+            <h2>@Say("From the Registry", "Registry から")</h2>
+            <p>@Say("Rule sets published to the Rulealize Registry, by whoever wrote them. A link names one at a version, and what it holds is fetched with it.", "Rulealize Registry に公開されたルールセットで、書いたのはそれぞれの作者です。リンクは 1 つの版を指し、取り込んでいるものも一緒に取ってきます。")</p>
         </div>
         @if (registryProblem is not null)
         {
@@ -91,7 +91,7 @@
         }
         else if (registered is null)
         {
-            <p class="muted">Loading…</p>
+            <p class="muted">@Say("Loading…", "読み込み中…")</p>
         }
         else
         {
@@ -118,7 +118,7 @@
                             <div class="card sample unavailable">
                                 <span class="sample-head">@listed.Entry.Id</span>
                                 <p>@listed.Entry.Description</p>
-                                <span class="tags"><span class="chip">@listed.Entry.Latest</span><span class="chip warn">Rulpane cannot run it</span></span>
+                                <span class="tags"><span class="chip">@listed.Entry.Latest</span><span class="chip warn">@Say("Rulpane cannot run it", "Rulpane では動かせません")</span></span>
                                 <p class="muted">@listed.Problem</p>
                             </div>
                         }
@@ -130,21 +130,21 @@
 
     <section class="section">
         <div class="section-head">
-            <h2>Make a link from your own rules</h2>
-            <p>Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens. A rule set that <span class="mono">uses</span> one from the Registry gets it from there, so the link carries only what you wrote.</p>
+            <h2>@Say("Make a link from your own rules", "自分のルールからリンクを作る")</h2>
+            <p>@Say("Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens. A rule set that ", "ルールセットと、あればビューとテーマを貼り付けてください。どれもここで先に確かめるので、このページが渡すリンクは必ず開けます。Registry のルールセットを ")<span class="mono">uses</span>@Say(" one from the Registry gets it from there, so the link carries only what you wrote.", " するルールセットはそこから取ってくるので、リンクに入るのは自分が書いた部分だけです。")</p>
         </div>
         <div class="card make">
             <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="8" spellcheck="false"
-                      placeholder="Paste the rule set JSON. Comments are dropped from the link."></textarea>
+                      placeholder="@Say("Paste the rule set JSON. Comments are dropped from the link.", "ルールセットの JSON を貼り付けてください。コメントはリンクに入りません。")"></textarea>
             <textarea class="view-editor" @bind="viewDocument" @bind:event="oninput" rows="4" spellcheck="false"
-                      placeholder="Optional: a view (rulealize/view/v1). Left empty, the screen is made from the rules."></textarea>
+                      placeholder="@Say("Optional: a view (rulealize/view/v1). Left empty, the screen is made from the rules.", "任意：ビュー（rulealize/view/v1）。空のままなら、ルールから画面を作ります。")"></textarea>
             <textarea class="view-editor" @bind="themeDocument" @bind:event="oninput" rows="4" spellcheck="false"
-                      placeholder="Optional: a theme (rulealize/theme/v1). Left empty, the screen looks like Rulpane."></textarea>
+                      placeholder="@Say("Optional: a theme (rulealize/theme/v1). Left empty, the screen looks like Rulpane.", "任意：テーマ（rulealize/theme/v1）。空のままなら、Rulpane の見た目です。")"></textarea>
             <div class="make-row">
-                <button class="primary" @onclick="Make"><Icon Name="link" />Make link</button>
+                <button class="primary" @onclick="Make"><Icon Name="link" />@Say("Make link", "リンクを作る")</button>
                 @if (link is not null)
                 {
-                    <span class="made"><Icon Name="check" /><a href="@link">Open @id</a><span class="muted">· @link.Length characters</span></span>
+                    <span class="made"><Icon Name="check" /><a href="@link">@Say($"Open {id}", $"{id} を開く")</a><span class="muted">@Say($"· {link.Length} characters", $"· {link.Length} 文字")</span></span>
                 }
             </div>
             @if (problem is not null)
@@ -161,18 +161,18 @@
     // Each describes the document of the same name in wwwroot/rulesets, its view the one in wwwroot/views, and its theme the one in wwwroot/themes.
     private static readonly Sample[] Samples =
     [
-        new("approval", "Draft, review, then approve or reject with a reason.", ["3 inputs", "projection"]),
-        new("countdown", "Count to ten, one to three at a time.", ["1 input"]),
-        new("reversi", "Reversi on an eight-by-eight board, for two.", ["grid", "actors"]),
-        new("blackjack", "Cards are drawn in your browser, weighted by the rules.", ["chance", "actors"]),
-        new("tictactoe", "Three in a row, for two.", ["grid", "actors"]),
-        new("roster", "A shift roster: put staff on the shifts still open.", ["records"]),
-        new("approval", "The same rules, laid out by a view: a claim, its stage, the review.", ["view", "showWhen"], View: "approval"),
-        new("countdown", "The total set large; the moves under it.", ["view", "stats"], View: "countdown"),
-        new("roster", "Who is on which shift, as tables, with a block of moves for each input.", ["view", "table"], View: "roster"),
-        new("reversi", "The board drawn square by square: choose a square to place there.", ["view", "board"], View: "reversi"),
-        new("approval", "The claim again, on paper: warm colours, a serif, square corners.", ["theme"], View: "approval", Theme: "paper"),
-        new("roster", "The roster, rounder and closer together, in green.", ["theme", "compact"], View: "roster", Theme: "meadow"),
+        new("approval", Say("Draft, review, then approve or reject with a reason.", "下書き、審査、そして承認か、理由を付けて差し戻し。"), [Say("3 inputs", "input 3 つ"), "projection"]),
+        new("countdown", Say("Count to ten, one to three at a time.", "1 回に 1〜3 ずつ、10 まで数える。"), [Say("1 input", "input 1 つ")]),
+        new("reversi", Say("Reversi on an eight-by-eight board, for two.", "8×8 の盤で、2 人で遊ぶリバーシ。"), ["grid", "actors"]),
+        new("blackjack", Say("Cards are drawn in your browser, weighted by the rules.", "カードはブラウザの中で、ルールの重みどおりに引かれます。"), ["chance", "actors"]),
+        new("tictactoe", Say("Three in a row, for two.", "2 人で遊ぶ三目並べ。"), ["grid", "actors"]),
+        new("roster", Say("A shift roster: put staff on the shifts still open.", "シフト表。まだ空いているシフトに人を入れます。"), ["records"]),
+        new("approval", Say("The same rules, laid out by a view: a claim, its stage, the review.", "同じルールをビューで並べたもの。申請、その段階、審査。"), ["view", "showWhen"], View: "approval"),
+        new("countdown", Say("The total set large; the moves under it.", "合計を大きく、その下に操作ボタン。"), ["view", "stats"], View: "countdown"),
+        new("roster", Say("Who is on which shift, as tables, with a block of moves for each input.", "誰がどのシフトに入っているかを表で。操作は input ごとにまとめて。"), ["view", "table"], View: "roster"),
+        new("reversi", Say("The board drawn square by square: choose a square to place there.", "盤をマスごとに描きます。マスを選ぶと、そこに置きます。"), ["view", "board"], View: "reversi"),
+        new("approval", Say("The claim again, on paper: warm colours, a serif, square corners.", "申請をもう一度、紙の上で。暖かい色、セリフ体、角ばった角。"), ["theme"], View: "approval", Theme: "paper"),
+        new("roster", Say("The roster, rounder and closer together, in green.", "シフト表を、丸く、詰めて、緑で。"), ["theme", "compact"], View: "roster", Theme: "meadow"),
     ];
 
     // A template's name comes first among the tags. The official rule sets open with nothing in
@@ -180,15 +180,15 @@
     // from the example in each one's repository.
     private static readonly Sample[] Templated =
     [
-        new("request", "Rulealize.RuleSet.Request, which projects its stage under that very name.", ["stages", "official", "as it is"], View: "stages",
+        new("request", Say("Rulealize.RuleSet.Request, which projects its stage under that very name.", "Rulealize.RuleSet.Request。段階をテンプレートと同じ名前で projection しています。"), ["stages", Say("official", "公式"), Say("as it is", "そのまま")], View: "stages",
             Data: """{"subjects":["mon-am","mon-pm","tue-am"],"stage":"draft","subject":null}"""),
-        new("approval", "The same template on the approval rules, which keep the stage in summary.", ["stages", "bind"], View: "approval-stages"),
-        new("checklist", "Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", ["progress", "official", "bind $"], View: "checklist-progress",
+        new("approval", Say("The same template on the approval rules, which keep the stage in summary.", "同じテンプレートを approval のルールに。こちらは段階を summary に持っています。"), ["stages", "bind"], View: "approval-stages"),
+        new("checklist", Say("Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", "Rulealize.RuleSet.Checklist。手順を好きな順に済ませます。リストは state のフィールドです。"), ["progress", Say("official", "公式"), "bind $"], View: "checklist-progress",
             Data: """{"steps":["contract","equipment","induction","payroll"],"done":["contract"]}"""),
-        new("signatures", "Rulealize.RuleSet.Signatures: the same template, counting who has signed.", ["progress", "official", "bind"], View: "signatures-progress",
+        new("signatures", Say("Rulealize.RuleSet.Signatures: the same template, counting who has signed.", "Rulealize.RuleSet.Signatures。同じテンプレートで、署名した人を数えます。"), ["progress", Say("official", "公式"), "bind"], View: "signatures-progress",
             Data: """{"signatories":["ann","bo","cy"],"required":2,"signed":[],"outcome":"open"}"""),
-        new("tictactoe", "A board game that projects its turn by the name the template expects; the board is bound to its state field.", ["grid-game", "bind $"], View: "tictactoe-grid-game"),
-        new("reversi", "The same template on reversi, whose board and turn are state fields. Passing is under the board.", ["grid-game", "bind $"], View: "reversi-grid-game"),
+        new("tictactoe", Say("A board game that projects its turn by the name the template expects; the board is bound to its state field.", "テンプレートが期待する名前で手番を projection している盤のゲーム。盤は state のフィールドに結び付けています。"), ["grid-game", "bind $"], View: "tictactoe-grid-game"),
+        new("reversi", Say("The same template on reversi, whose board and turn are state fields. Passing is under the board.", "同じテンプレートを reversi に。盤も手番も state のフィールドです。パスは盤の下にあります。"), ["grid-game", "bind $"], View: "reversi-grid-game"),
     ];
 
     // A registered rule set at its newest version, or why Rulpane cannot run it.

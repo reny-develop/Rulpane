@@ -33,7 +33,7 @@
                 }
                 else
                 {
-                    <span class="square" aria-label="@($"{coord}: {(text is null ? "empty" : Names.Value(text))}")">
+                    <span class="square" aria-label="@($"{coord}: {(text is null ? Say("empty", "空き") : Names.Value(text))}")">
                         <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
                     </span>
                 }

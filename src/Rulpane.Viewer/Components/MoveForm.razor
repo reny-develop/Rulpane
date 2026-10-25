@@ -13,7 +13,7 @@
             {
                 @* The schema lists every value it admits, so the screen offers them rather than asking for one to be typed. *@
                 <select @bind="values[parameter.Name]" aria-invalid="@(codes.Length > 0)">
-                    <option value="" disabled>Choose…</option>
+                    <option value="" disabled>@Say("Choose…", "選んでください…")</option>
                     @foreach (string choice in choices)
                     {
                         <option value="@choice">@Names.Value(choice)</option>
@@ -26,7 +26,7 @@
             }
             @foreach (string refusal in codes)
             {
-                <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix=" refused by the rules" /></span>
+                <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix="@Say(" refused by the rules", " はルールに拒否されました")" /></span>
             }
             @if (parameter.Description is { Fields.Count: > 0 } bounds && Choices(parameter) is null)
             {

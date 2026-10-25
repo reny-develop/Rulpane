@@ -83,7 +83,7 @@
                     }
                     else
                     {
-                        <p class="card-body muted">Nothing to list.</p>
+                        <p class="card-body muted">@Say("Nothing to list.", "表示するものがありません。")</p>
                     }
                 </section>
                 break;
@@ -122,7 +122,7 @@
                     }
                     else
                     {
-                        <p class="card-body muted">Nothing to list.</p>
+                        <p class="card-body muted">@Say("Nothing to list.", "表示するものがありません。")</p>
                     }
                 </section>
                 break;
@@ -134,7 +134,7 @@
                 says so, unless every move there is is already a square of a board on screen.
             *@
             case Actions actions when Moves is not null && (Offered(actions).Count > 0 || actions.Inputs is null && OnBoards.Count == 0):
-                <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? "Moves")" Side="false" Select="actions.Select"
+                <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? Say("Moves", "操作"))" Side="false" Select="actions.Select"
                            OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" />
                 break;
         }

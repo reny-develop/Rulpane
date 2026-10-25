@@ -8,9 +8,10 @@
 <div class="provenance">
     <button class="provenance-button @(open ? "open" : null)" @onclick="Toggle" aria-expanded="@open" aria-controls="provenance-details">
         <Icon Name="shield" Size="14" />
-        <span class="long">@(InLink ? "Made by the link's author" : "Published by others"), not by Rulpane. Rulpane never asks for passwords or payment.</span>
+        <span class="long">@Say($"{(InLink ? "Made by the link's author" : "Published by others")}, not by Rulpane. Rulpane never asks for passwords or payment.",
+                                 $"Rulpane ではなく、{(InLink ? "リンクの作者が作ったもの" : "他の人が公開したもの")}です。Rulpane はパスワードや支払いを求めません。")</span>
         @* Two lines set by hand, so the button is only as wide as the longer of them. *@
-        <span class="short"><span>@(InLink ? "Made by the link's author" : "Published by others"), not Rulpane.</span><span>Rulpane never asks for passwords.</span></span>
+        <span class="short"><span>@Say($"{(InLink ? "Made by the link's author" : "Published by others")}, not Rulpane.", $"Rulpane ではなく{(InLink ? "リンクの作者が作成" : "他の人が公開")}。")</span><span>@Say("Rulpane never asks for passwords.", "Rulpane はパスワードを求めません。")</span></span>
         <Icon Name="info" Size="14" />
     </button>
 
@@ -21,27 +22,28 @@
             <span class="grabber" aria-hidden="true"></span>
             <div class="details-head">
                 <span class="badge"><Icon Name="shield" Size="16" /></span>
-                <h2 id="provenance-title">About this screen</h2>
+                <h2 id="provenance-title">@Say("About this screen", "この画面について")</h2>
             </div>
             <div class="details-section">
-                <h3>Who made it</h3>
+                <h3>@Say("Who made it", "誰が作ったか")</h3>
                 @if (InLink)
                 {
-                    <p>Whoever made this link. The rules, the layout and the look travel inside the link itself, and Rulpane runs them without checking who wrote them.</p>
+                    <p>@Say("Whoever made this link. The rules, the layout and the look travel inside the link itself, and Rulpane runs them without checking who wrote them.", "このリンクを作った人です。ルール、レイアウト、見た目はリンクそのものに入っていて、Rulpane は誰が書いたかを確かめずに動かしています。")</p>
                 }
                 @if (Published.Count > 0)
                 {
-                    <p>@(InLink ? "The link also names" : "The link names") rules published to the Rulealize Registry: @string.Join(", ", Published). Whoever published them wrote them. The Registry checks that a package is the one it says it is, and nobody reviews what its rules do.</p>
+                    <p>@Say($"{(InLink ? "The link also names" : "The link names")} rules published to the Rulealize Registry: {string.Join(", ", Published)}. Whoever published them wrote them. The Registry checks that a package is the one it says it is, and nobody reviews what its rules do.",
+                           $"このリンクは{(InLink ? "ほかに、" : "")} Rulealize Registry に公開されたルールを指しています：{string.Join("、", Published)}。書いたのは公開した人です。Registry はパッケージが名乗りどおりのものかを確かめますが、ルールの中身を審査する人はいません。")</p>
                 }
             </div>
             <div class="details-section">
-                <h3>What Rulpane makes sure of</h3>
-                <p>A link can only lay out the rules' values and moves, and colour them in colours that can be read. This bar is always Rulpane's own.</p>
+                <h3>@Say("What Rulpane makes sure of", "Rulpane が保証すること")</h3>
+                <p>@Say("A link can only arrange the rules' values and moves and choose their colours, and Rulpane refuses colours that are hard to read. It cannot run scripts of its own, and it cannot change this bar.", "リンクで決められるのは、ルールの値や操作ボタンを画面のどこに置くかと、その色だけです。読みにくい配色は Rulpane が受け付けません。リンクが独自のスクリプトを動かすことはできず、この上部バーもリンクからは変えられません。")</p>
             </div>
             <div class="details-section watch">
-                <h3>What to watch for</h3>
-                <p>Rulpane never asks for passwords, payment or personal details. If this screen does, close it.</p>
-                <p>Names, logos and wording on the screen are typed by the link's author. Anyone can type them.</p>
+                <h3>@Say("What to watch for", "気をつけること")</h3>
+                <p>@Say("Rulpane never asks for passwords, payment or personal details. If this screen does, close it.", "Rulpane がパスワード、支払い、個人情報を求めることはありません。この画面が求めてきたら、閉じてください。")</p>
+                <p>@Say("Names, logos and wording on the screen are typed by the link's author. Anyone can type them.", "画面にある名前、ロゴ、文言は、リンクの作者が入力したものです。誰でも入力できます。")</p>
             </div>
             @if (showing)
             {
@@ -54,8 +56,8 @@
                 }
             }
             <div class="details-actions">
-                <button @onclick="() => showing = !showing">@(showing ? "Hide the rules" : "View the rules")</button>
-                <button class="primary" @onclick="Close">Got it</button>
+                <button @onclick="() => showing = !showing">@(showing ? Say("Hide the rules", "ルールを隠す") : Say("View the rules", "ルールを見る"))</button>
+                <button class="primary" @onclick="Close">@Say("Got it", "わかりました")</button>
             </div>
         </section>
     }

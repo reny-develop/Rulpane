@@ -27,8 +27,8 @@
     }
     <span class="spacer"></span>
     <nav class="bar-links">
-        <a class="button ghost small" href="@BaseUri">Samples</a>
-        <a class="button ghost small" href="@(BaseUri + "#" + MakeFragment)"><Icon Name="code" Size="14" />Make a link</a>
+        <a class="button ghost small" href="@BaseUri">@Say("Samples", "サンプル")</a>
+        <a class="button ghost small" href="@(BaseUri + "#" + MakeFragment)"><Icon Name="code" Size="14" />@Say("Make a link", "リンクを作る")</a>
     </nav>
 </header>
 
@@ -39,18 +39,18 @@
 <main class="@(session is not null && theme is not null ? theme.IsCompact ? "themed compact" : "themed" : null)">
     @if (loading)
     {
-        <p class="muted">Loading…</p>
+        <p class="muted">@Say("Loading…", "読み込み中…")</p>
     }
     else if (error is not null)
     {
         <section class="card failure">
             <span class="failure-icon"><Icon Name="alert" Size="20" /></span>
-            <h1>This link cannot be opened</h1>
-            <p>Rulpane could not read the rules or the view it names. Nothing was run.</p>
+            <h1>@Say("This link cannot be opened", "このリンクは開けません")</h1>
+            <p>@Say("Rulpane could not read the rules or the view it names. Nothing was run.", "リンクが指すルールかビューを Rulpane が読めませんでした。何も実行していません。")</p>
             <pre><strong>@error.Value.Type</strong>@error.Value.Message</pre>
             <div class="actions">
-                <a class="button primary" href="@BaseUri"><Icon Name="back" />Back to the start</a>
-                <button @onclick="CopyError"><Icon Name="@(copied ? "check" : "copy")" />@(copied ? "Copied" : "Copy details")</button>
+                <a class="button primary" href="@BaseUri"><Icon Name="back" />@Say("Back to the start", "トップに戻る")</a>
+                <button @onclick="CopyError"><Icon Name="@(copied ? "check" : "copy")" />@(copied ? Say("Copied", "コピーしました") : Say("Copy details", "詳細をコピー"))</button>
             </div>
         </section>
     }
@@ -69,43 +69,43 @@
                             <h1>@(view?.Title ?? Id)</h1>
                             @if (terminal.IsTerminal)
                             {
-                                <span class="chip ok dot">Finished</span>
+                                <span class="chip ok dot">@Say("Finished", "終了")</span>
                             }
                             else
                             {
-                                <span class="chip accent dot">In progress</span>
+                                <span class="chip accent dot">@Say("In progress", "進行中")</span>
                             }
                         </div>
-                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? "bundled" : source is { IsRegistered: true } ? "from the Registry" : "embedded in the link")@(viewSource is null ? null : viewSource.IsBundled ? $" · view {viewSource.Value}" : " · view embedded in the link")@(themeSource is null ? null : themeSource.IsBundled ? $" · theme {themeSource.Value}" : " · theme embedded in the link")</span>
+                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? Say("bundled", "同梱") : source is { IsRegistered: true } ? Say("from the Registry", "Registry から") : Say("embedded in the link", "リンクに埋め込み"))@(viewSource is null ? null : viewSource.IsBundled ? Say($" · view {viewSource.Value}", $" · ビュー {viewSource.Value}") : Say(" · view embedded in the link", " · ビューはリンクに埋め込み"))@(themeSource is null ? null : themeSource.IsBundled ? Say($" · theme {themeSource.Value}", $" · テーマ {themeSource.Value}") : Say(" · theme embedded in the link", " · テーマはリンクに埋め込み"))</span>
                     </div>
                     <div class="actions">
-                        <button @onclick="Restart" title="Start over"><Icon Name="restart" /><span class="label">Start over</span></button>
-                        <button @onclick="CopyLink" title="Copy link"><Icon Name="@(copied ? "check" : "link")" /><span class="label">@(copied ? "Copied" : "Copy link")</span></button>
+                        <button @onclick="Restart" title="@Say("Start over", "最初から")"><Icon Name="restart" /><span class="label">@Say("Start over", "最初から")</span></button>
+                        <button @onclick="CopyLink" title="@Say("Copy link", "リンクをコピー")"><Icon Name="@(copied ? "check" : "link")" /><span class="label">@(copied ? Say("Copied", "コピーしました") : Say("Copy link", "リンクをコピー"))</span></button>
                     </div>
                 </header>
 
                 @if (lastMove is not null)
                 {
                     <p class="last-move">
-                        <span class="chip mark">Last move</span>
+                        <span class="chip mark">@Say("Last move", "直前の操作")</span>
                         <span class="move-text">@lastMove</span>
                         @if (lastDraws.Length > 0)
                         {
-                            <span class="drew"><Icon Name="dice" Size="14" />drew @string.Join(", ", lastDraws.Select(Names.Rendered))</span>
+                            <span class="drew"><Icon Name="dice" Size="14" />@Say($"drew {string.Join(", ", lastDraws.Select(Names.Rendered))}", $"抽選：{string.Join("、", lastDraws.Select(Names.Rendered))}")</span>
                         }
-                        <span class="undo"><Icon Name="back" Size="14" />Back to undo</span>
+                        <span class="undo"><Icon Name="back" Size="14" />@Say("Back to undo", "ブラウザの「戻る」で取り消し")</span>
                     </p>
                 }
 
                 @if (terminal.IsTerminal)
                 {
                     <section class="side result">
-                        <div class="result-head"><Icon Name="flag" />The rules have ended</div>
+                        <div class="result-head"><Icon Name="flag" />@Say("The rules have ended", "ルールが終了しました")</div>
                         <div class="result-value">
-                            <span class="key">result</span>
+                            <span class="key">@Say("result", "結果")</span>
                             <span class="value">@(terminal.Result is null ? "—" : Names.Rendered(terminal.Result))</span>
                         </div>
-                        <p>No moves are left. Share the link to hand over the finished position.</p>
+                        <p>@Say("No moves are left. Share the link to hand over the finished position.", "できる操作はもうありません。リンクを共有すれば、終わった状態をそのまま渡せます。")</p>
                     </section>
                 }
                 else if (moves is not null && view is null)
@@ -133,7 +133,7 @@
                 else
                 {
                     <section class="card">
-                        <div class="card-head"><h2>State</h2><span class="chip">no projections</span><span class="meta">shown as it is</span></div>
+                        <div class="card-head"><h2>@Say("State", "状態")</h2><span class="chip">@Say("no projections", "projection なし")</span><span class="meta">@Say("shown as it is", "そのまま表示")</span></div>
                         <ValueView Value="session.Data" Top="true" />
                     </section>
                 }
@@ -199,10 +199,10 @@
 
     // The documents this screen is made from, as their author wrote them, for whoever wants to read them.
     private List<(string Name, string Text)> Carried =>
-        [("Rules", texts[source!]),
-         .. Held.Select(d => ($"Held: {d.Id} {d.Version}", d.Text)),
-         .. viewSource is null ? [] : new[] { ("View", texts[viewSource]) },
-         .. themeSource is null ? [] : new[] { ("Theme", texts[themeSource]) }];
+        [(Say("Rules", "ルール"), texts[source!]),
+         .. Held.Select(d => (Say($"Held: {d.Id} {d.Version}", $"取り込み：{d.Id} {d.Version}"), d.Text)),
+         .. viewSource is null ? [] : new[] { (Say("View", "ビュー"), texts[viewSource]) },
+         .. themeSource is null ? [] : new[] { (Say("Theme", "テーマ"), texts[themeSource]) }];
 
     private IJSObjectReference? module;
     private IJSObjectReference? listener;
@@ -219,6 +219,7 @@
     {
         if (firstRender)
         {
+            await JS.InvokeVoidAsync("document.documentElement.setAttribute", "lang", Code);
             module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/fragment.js");
             self = DotNetObjectReference.Create(this);
             listener = await module.InvokeAsync<IJSObjectReference>("listen", self);

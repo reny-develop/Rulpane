@@ -180,6 +180,10 @@ A theme is checked when the link is opened. Every pair of colours the screen set
 
 When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." When nothing came in the link but the rules are from the Registry, it says "Published by others, not by Rulpane." in place of the first sentence. The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, which rule sets from the Registry it runs, what a link can do, what to watch for, and the documents themselves, the ones the rules hold included.
 
+## Language
+
+Rulpane's own words — the bar and its detail, the title row, the moves and the start page — are in Japanese when the browser's first language is Japanese, and in English otherwise. In Japanese the bar says 「Rulpane ではなく、リンクの作者が作ったものです。Rulpane はパスワードや支払いを求めません。」, or 「他の人が公開したもの」 for rules from the Registry. What a link carries stays in the one language its author wrote it in (see [Names](#names)), and a document refused when the link opens is refused in English, since the message names the document's own keys.
+
 ## Plugins
 
 A rule set in a URL can use only the plugins listed in [`CuratedRuntime`](src/Rulpane.Viewer/Engine/CuratedRuntime.cs). Plugins are never loaded from a URL.

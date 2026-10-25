@@ -8,19 +8,19 @@
 <section class="card moves @(Side ? "side" : null)">
     <div class="card-head">
         <h2>@Title</h2>
-        <span class="meta">@Moves.Count available</span>
+        <span class="meta">@Say($"{Moves.Count} available", $"{Moves.Count} 件")</span>
     </div>
     <div class="moves-body">
         @if (Moves.Count == 0)
         {
-            <p class="muted">No moves are available right now.</p>
+            <p class="muted">@Say("No moves are available right now.", "いまできる操作はありません。")</p>
         }
         @foreach (var block in Moves.GroupBy(m => m.Actor))
         {
             <div class="block">
                 @if (block.Key is not null)
                 {
-                    <div class="actor-head"><span class="chip accent"><Icon Name="user" Size="12" />@Names.Value(block.Key)</span> to act</div>
+                    <div class="actor-head"><span class="chip accent"><Icon Name="user" Size="12" />@Names.Value(block.Key)</span> @Say("to act", "の番")</div>
                 }
 
                 @{ var inputs = block.GroupBy(m => m.Input).ToList(); }
@@ -49,7 +49,7 @@
                             <div class="move-select">
                                 <select value="@Picked(input.Key, complete)" @onchange="e => picked[input.Key] = e.Value?.ToString() ?? string.Empty"
                                         aria-label="@Names.Input(input.Key)">
-                                    <option value="" disabled>Choose…</option>
+                                    <option value="" disabled>@Say("Choose…", "選んでください…")</option>
                                     @foreach (var (move, i) in complete.Select((m, i) => (m, i)))
                                     {
                                         <option value="@i">@ArgumentLabel(move)</option>
@@ -81,7 +81,7 @@
         }
         @if (Truncated)
         {
-            <p class="muted">Too many candidates: the list stops at @Session.ValidationLimit.</p>
+            <p class="muted">@Say($"Too many candidates: the list stops at {Session.ValidationLimit}.", $"候補が多すぎるため、{Session.ValidationLimit} 個で打ち切っています。")</p>
         }
         @if (Rejection is not null)
         {
@@ -101,7 +101,7 @@
     /// <summary>Whether the search stopped at the limit, so <see cref="Moves"/> is not all of them.</summary>
     [Parameter] public bool Truncated { get; set; }
 
-    [Parameter] public string Title { get; set; } = "Moves";
+    [Parameter] public string Title { get; set; } = Say("Moves", "操作");
 
     /// <summary>Whether this is the column beside the view, which a wide screen keeps in sight.</summary>
     [Parameter] public bool Side { get; set; } = true;
