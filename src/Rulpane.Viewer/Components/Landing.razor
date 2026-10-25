@@ -16,12 +16,14 @@
 
         <div class="card anatomy">
             <h2>The whole screen is in the link</h2>
-            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
+            <a class="url" href="@(BaseUri + Fragment.Build(("r", "approval"), ("v", "approval"), ("t", "paper"), ("s", ExampleState)))">@Host<span class="r">#r=approval</span><span class="v">&amp;v=approval</span><span class="t">&amp;t=paper</span><span class="s">&amp;s=@ExampleState[..14]…</span></a>
             <dl>
                 <dt><span class="chip accent">r</span></dt>
                 <dd>The rule set: a bundled name, or the JSON itself, compressed</dd>
                 <dt><span class="chip warn">v</span></dt>
                 <dd>The view: where each value goes. Left out, the screen is made from the rules</dd>
+                <dt><span class="chip">t</span></dt>
+                <dd>The theme: colours, corners and type. Left out, it looks like Rulpane</dd>
                 <dt><span class="chip ok">s</span></dt>
                 <dd>The position. Left out, the rules start from the beginning</dd>
             </dl>

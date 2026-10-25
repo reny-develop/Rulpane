@@ -491,6 +491,7 @@ main.compact { padding-top: 20px; }
 .anatomy .url .r { color: var(--color-accent); font-weight: 600; }
 .anatomy .url .s { color: var(--color-ok); font-weight: 600; }
 .anatomy .url .v { color: var(--color-warn); font-weight: 600; }
+.anatomy .url .t { color: var(--color-text); font-weight: 600; }
 .anatomy dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 10px; align-items: center; margin: 0; font-size: 13px; color: var(--color-muted); }
 .anatomy dt .chip { font-family: var(--font-mono); }
 .anatomy dd { margin: 0; }
