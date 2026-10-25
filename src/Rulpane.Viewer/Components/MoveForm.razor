@@ -9,12 +9,26 @@
         string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
         <label class="field @(codes.Length > 0 ? "invalid" : null)">
             <span class="label">@Names.Param(parameter.Name) <span class="chip">@Kind(parameter)</span></span>
-            <input @bind="values[parameter.Name]" placeholder="@Kind(parameter)" aria-invalid="@(codes.Length > 0)" />
+            @if (Choices(parameter) is string[] choices)
+            {
+                @* The schema lists every value it admits, so the screen offers them rather than asking for one to be typed. *@
+                <select @bind="values[parameter.Name]" aria-invalid="@(codes.Length > 0)">
+                    <option value="" disabled>Choose…</option>
+                    @foreach (string choice in choices)
+                    {
+                        <option value="@choice">@Names.Value(choice)</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <input @bind="values[parameter.Name]" placeholder="@Kind(parameter)" aria-invalid="@(codes.Length > 0)" />
+            }
             @foreach (string refusal in codes)
             {
                 <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix=" refused by the rules" /></span>
             }
-            @if (parameter.Description is { Fields.Count: > 0 } bounds)
+            @if (parameter.Description is { Fields.Count: > 0 } bounds && Choices(parameter) is null)
             {
                 <small>@Bounds(bounds)</small>
             }
@@ -50,9 +64,23 @@
         return OnSubmit.InvokeAsync(typed);
     }
 
+    // An enumeration declares its values among its bounds; null for a parameter that lists none.
+    private static string[]? Choices(OpenParameter parameter) =>
+        parameter.Op == "type.enum" && parameter.Description.Fields.FirstOrDefault(f => f.Key == "values").Value is SequenceValue values
+            ? values.Select(v => v.GetCanonicalText() ?? "").ToArray()
+            : null;
+
     // The bounds as the document writes them: "min 1 · max 100000".
     private static string Bounds(RecordValue bounds) =>
-        string.Join(" · ", bounds.Fields.Select(f => $"{f.Key} {Display.Unquote(f.Value.GetCanonicalText() ?? "null")}"));
+        string.Join(" · ", bounds.Fields.Select(f => $"{f.Key} {Bound(f.Value)}"));
+
+    // A list or a record has no canonical text of its own, so each is written out from its parts: "values a, b".
+    private static string Bound(RuleValue value) => value switch
+    {
+        SequenceValue items => string.Join(", ", items.Select(Bound)),
+        RecordValue record => "{" + string.Join(", ", record.Fields.Select(f => $"{f.Key}: {Bound(f.Value)}")) + "}",
+        _ => Display.Unquote(value.GetCanonicalText() ?? "null"),
+    };
 
     // The schema node's name without its plugin, which is all a person filling it in needs.
     private static string Kind(OpenParameter parameter) => parameter.Op switch

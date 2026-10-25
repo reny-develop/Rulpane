@@ -301,7 +301,8 @@
                 if (!views.TryGetValue((rules, layout), out view))
                 {
                     texts[viewSource] = await viewSource.ReadAsync(Http);
-                    view = View.Parse(texts[viewSource], context, texts[source]);
+                    string? template = View.TemplateOf(texts[viewSource]) is string name ? await Source.View(name).ReadAsync(Http) : null;
+                    view = View.Parse(texts[viewSource], context, texts[source], template);
                     views[(rules, layout)] = view;
                 }
             }
@@ -323,6 +324,7 @@
             moves = valid?.ToList();
             truncated = valid?.Truncated ?? false;
             projections = session.Context.Projections.ToDictionary(name => name, session.Project);
+            view?.Check(name => projections.GetValueOrDefault(name), session.Data);
         }
         catch (Exception e)
         {

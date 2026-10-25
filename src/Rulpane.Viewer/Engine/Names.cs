@@ -19,6 +19,13 @@ public sealed record Names(
         new Dictionary<string, string>(), new Dictionary<string, string>(),
         new Dictionary<string, string>(), new Dictionary<string, string>());
 
+    /// <summary>These names, with each that <paramref name="other"/> gives replaced by its: a view's own over its template's.</summary>
+    public Names Over(Names other) => new(
+        Merge(Inputs, other.Inputs), Merge(Params, other.Params), Merge(Codes, other.Codes), Merge(Values, other.Values));
+
+    private static Dictionary<string, string> Merge(IReadOnlyDictionary<string, string> under, IReadOnlyDictionary<string, string> over) =>
+        under.Concat(over).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.Last().Value);
+
     public string Input(string name) => Inputs.GetValueOrDefault(name, name);
 
     public string Param(string name) => Params.GetValueOrDefault(name, name);

@@ -1,0 +1,24 @@
+{
+  "$schema": "rulealize/view/v1",
+  // A template: written for no one rule set, but for any that projects where its case stands.
+  // It names no ruleSet and reads no state; what it needs is in `expects`, and nothing else.
+  "expects": {
+    "projections": { "stage": "string" }
+  },
+  "layout": [
+    {
+      "c": "fields", "title": "Where it stands",
+      "rows": [
+        { "label": "Stage", "bind": "stage",
+          "tone": { "review": "accent", "approved": "ok", "granted": "ok", "rejected": "danger", "denied": "danger" } }
+      ]
+    },
+    { "c": "actions", "title": "What can be done", "inputs": "*" }
+  ],
+  "names": {
+    "values": {
+      "draft": "Draft", "review": "In review",
+      "approved": "Approved", "granted": "Granted", "rejected": "Rejected", "denied": "Denied"
+    }
+  }
+}

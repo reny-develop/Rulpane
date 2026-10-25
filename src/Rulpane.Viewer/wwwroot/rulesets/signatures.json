@@ -1,0 +1,131 @@
+{
+  "$schema": "rulealize/ruleset/v1",
+  "id": "Rulealize.RuleSet.Signatures",
+  "version": "1.1.0",
+
+  // A decision that needs several signatures before it counts.
+  //
+  // Four-eyes approval and everything above it, written once. `required` is a number the
+  // instance supplies, so two signatures and five are two state documents and this one rule
+  // set — and one signature is the degenerate case, which is worth being able to write without
+  // reaching for a different document.
+  //
+  // ── What is being signed is not in this document ──
+  //
+  // Deliberately. This says how many said yes and who is still able to; what they are saying
+  // yes *to* is the holder's, and a composite that holds this beside
+  // [Rulealize.RuleSet.Request](https://www.nuget.org/packages/Rulealize.RuleSet.Request) has
+  // the subject in one and the counting in the other, with the guard that joins them in
+  // neither. That guard is what composition is for.
+  //
+  // ── One refusal ends it ──
+  //
+  // `decline` refuses on behalf of everybody, rather than removing one signatory and letting
+  // the rest carry on. That is the stricter reading and it is the one worth publishing: a
+  // process where a named approver said no and the thing happened anyway is not an approval
+  // process, and a holder that wants the softer rule can hide `decline` with `held` and drive
+  // its own.
+  //
+  // ── Nobody signs twice ──
+  //
+  // `waiting` is the signatories who have not, filtered by absence rather than by a set,
+  // because there is no set vocabulary in this ecosystem. It is also what the domain offers,
+  // so signing twice is not a move that has to be refused: it is one that is never listed.
+
+  "requires": [
+    { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.State",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Logic",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Binding",    "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Branch",     "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Definition", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Arithmetic", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Sequence",   "version": "^1.0" }
+  ],
+
+  "state": {
+    "schema": {
+      // Who may sign. The instance, not the domain.
+      "signatories": { "op": "type.list", "element": { "op": "type.string", "minLength": 1 } },
+
+      // How many of them it takes. Not checked against the number of signatories, because a
+      // case asking for more signatures than it has people is a case that never settles —
+      // which is a true thing about that case, and refusing to represent it here would be this
+      // document deciding something the holder can see for itself.
+      "required": { "op": "type.int", "min": 1 },
+
+      "signed": { "op": "type.list", "element": { "op": "type.string", "minLength": 1 } },
+      "outcome": { "op": "type.enum", "values": ["open", "signed", "refused"] }
+    },
+
+    "initial": { "signatories": [], "required": 1, "signed": [], "outcome": "open" }
+  },
+
+  "definitions": {
+    // The signatories who have not signed, by absence from `signed`. The inner predicate reads
+    // the outer binding, which is what makes this one expression rather than two passes.
+    "waiting": {
+      "op": "seq.where", "source": "$signatories", "as": "p",
+      "predicate": {
+        "op": "logic.not",
+        "value": {
+          "op": "seq.any", "source": "$signed", "as": "s",
+          "predicate": { "op": "cmp.eq", "left": "@s", "right": "@p" }
+        }
+      }
+    }
+  },
+
+  "inputs": {
+    "sign": {
+      "params": { "who": { "domain": "#waiting" } },
+      "when": { "op": "cmp.eq", "left": "$outcome", "right": "open" },
+      "effects": [
+        {
+          "op": "state.set", "path": "signed",
+          "value": { "op": "seq.concat", "of": ["$signed", { "op": "seq.of", "of": ["@who"] }] }
+        },
+
+        // Both effects read the state the transition found, so this counts what was signed
+        // before and adds the one being added now. Reading `$signed` here and expecting the
+        // first effect's write is the mistake this note exists to name.
+        {
+          "op": "state.set", "path": "outcome",
+          "value": {
+            "op": "branch.if",
+            "cond": {
+              "op": "cmp.gte",
+              "left": { "op": "math.add", "of": [{ "op": "seq.count", "source": "$signed" }, 1] },
+              "right": "$required"
+            },
+            "then": "signed", "else": "open"
+          }
+        }
+      ]
+    },
+
+    "decline": {
+      "params": { "who": { "domain": "#waiting" } },
+      "when": { "op": "cmp.eq", "left": "$outcome", "right": "open" },
+      "effects": [ { "op": "state.set", "path": "outcome", "value": "refused" } ]
+    }
+  },
+
+  // What a host shows of a position, so that no screen reads the state to find out. Four are
+  // the fields themselves; `waiting` is the one a host would otherwise work out for itself,
+  // and is the same definition the inputs offer their domain from, so the screen and the
+  // moves cannot disagree about who may still sign.
+  "projections": {
+    "signatories": "$signatories",
+    "required": "$required",
+    "signed": "$signed",
+    "waiting": "#waiting",
+    "outcome": "$outcome"
+  },
+
+  "terminal": {
+    "when": { "op": "cmp.ne", "left": "$outcome", "right": "open" },
+    "result": "$outcome"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "reversi@1",
+  // Reversi projects nothing, so the board and the turn the template expects are its state fields.
+  "template": "grid-game",
+  "bind": {
+    "projections": { "board": "$board", "turn": "$turn" }
+  },
+  "title": "Reversi",
+  "names": {
+    "inputs": { "pass": "Pass" },
+    "values": { "black": "Black", "white": "White", "draw": "Draw" }
+  }
+}

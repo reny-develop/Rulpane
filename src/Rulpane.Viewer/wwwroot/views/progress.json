@@ -1,0 +1,13 @@
+{
+  "$schema": "rulealize/view/v1",
+  // A template for anything worked through one item at a time: steps ticked off, signatures
+  // gathered. The moves say what is still open, so the template needs only these two lists.
+  "expects": {
+    "projections": { "all": "list<string>", "done": "list<string>" }
+  },
+  "layout": [
+    { "c": "list", "title": "Done so far", "bind": "done" },
+    { "c": "actions", "title": "Next", "inputs": "*" },
+    { "c": "list", "title": "All of them", "bind": "all" }
+  ]
+}

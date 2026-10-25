@@ -1,0 +1,18 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "Rulealize.RuleSet.Checklist@1",
+  // Checklist projects nothing, so the lists the template expects are read from its state.
+  "template": "progress",
+  "bind": {
+    "projections": { "all": "$steps", "done": "$done" }
+  },
+  "title": "Starting on Monday",
+  "names": {
+    "inputs": { "complete": "Done" },
+    "params": { "step": "step" },
+    "values": {
+      "contract": "Sign the contract", "equipment": "Hand out a laptop",
+      "induction": "Induction", "payroll": "Add to payroll"
+    }
+  }
+}

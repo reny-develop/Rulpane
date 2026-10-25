@@ -43,8 +43,24 @@
                                 <span class="params">· @string.Join(", ", arguments.Select(a => Names.Param(a.Key)))</span>
                             }
                         </div>
+                        @if (Select && input.Where(m => m.IsComplete).ToList() is { Count: > 0 } complete)
+                        {
+                            @* One list of the input's choices and one button to play the one picked; the order is the rules'. *@
+                            <div class="move-select">
+                                <select value="@Picked(input.Key, complete)" @onchange="e => picked[input.Key] = e.Value?.ToString() ?? string.Empty"
+                                        aria-label="@Names.Input(input.Key)">
+                                    <option value="" disabled>Choose…</option>
+                                    @foreach (var (move, i) in complete.Select((m, i) => (m, i)))
+                                    {
+                                        <option value="@i">@ArgumentLabel(move)</option>
+                                    }
+                                </select>
+                                <button class="move" disabled="@(Picked(input.Key, complete) == string.Empty)"
+                                        @onclick="() => OnPlay.InvokeAsync((complete[int.Parse(Picked(input.Key, complete))], null))">@Names.Input(input.Key)</button>
+                            </div>
+                        }
                         <div class="buttons">
-                            @foreach (ValidInput move in input)
+                            @foreach (ValidInput move in input.Where(m => !Select || !m.IsComplete))
                             {
                                 if (move.IsComplete)
                                 {
@@ -102,6 +118,27 @@
 
     /// <summary>What the view calls the inputs, parameters, values and codes shown here.</summary>
     [Parameter] public Names Names { get; set; } = Names.None;
+
+    /// <summary>Whether an input's choices are a list to pick from, rather than a button each.</summary>
+    [Parameter] public bool Select { get; set; }
+
+    // What is picked in each input's list, by input; a new position starts every list unpicked.
+    private readonly Dictionary<string, string> picked = new();
+    private string? pickedFor;
+
+    // The moves arrive as a new list on every render, so a new position is told apart by what they are.
+    protected override void OnParametersSet()
+    {
+        string position = string.Join('\n', Moves.Select(m => Names.Describe(m)));
+        if (position != pickedFor)
+        {
+            picked.Clear();
+            pickedFor = position;
+        }
+    }
+
+    private string Picked(string input, List<ValidInput> choices) =>
+        picked.TryGetValue(input, out string? i) && int.TryParse(i, out int n) && n < choices.Count ? i : string.Empty;
 
     // An input with nothing to choose is one button named after it.
     private static bool IsPlain(IGrouping<string, ValidInput> input) =>

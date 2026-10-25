@@ -1,0 +1,120 @@
+{
+  "$schema": "rulealize/ruleset/v1",
+  "id": "Rulealize.RuleSet.Request",
+  "version": "1.1.0",
+
+  // One request: raised over something, then granted or denied.
+  //
+  // The half of a business process that everybody writes and nobody wants to write twice.
+  // It is published to be held — a document names it in `uses`, gives it a short name with
+  // `as`, and writes the guard that neither half could write on its own.
+  //
+  // ── What the request is *for* is not in this document ──
+  //
+  // `subjects` is state, not schema. The rule set says that a request is raised over one of
+  // the things that may be requested; which things those are arrives in the state document.
+  // A roster's shifts, an order's line items and a deployment's environments are three
+  // state documents and this one rule set.
+  //
+  // That is also why `initial` names none of them. A held rule set opens where it opens — a
+  // composite cannot write its component's initial state, and that restriction is what lets
+  // anything true of this document stay true inside every document that holds it — so a
+  // demonstration instance written here would be forced on all of them. An empty `subjects`
+  // offers no `raise`, which is the right answer for a case nobody has said anything about
+  // yet.
+  //
+  // ── What a holder gets ──
+  //
+  //   rec.at($req, "stage")     draft, review, granted or denied
+  //   rec.at($req, "subject")   what was requested, or null before `raise`
+  //
+  // inside its own rules, and `req.subjects`, `req.stage` and `req.subject` outside them —
+  // the projections below, which a host asks of the holder's state instead of reading it.
+  //
+  // and `held.<alias>.raise.when` is asked with the candidate in scope as `@subject`, which
+  // is where "do not raise a request for a shift that is already filled" is written. A
+  // composite may only refuse, so nothing it writes can grant a request this document would
+  // not have offered.
+  //
+  // ── Why `deny` carries no reason ──
+  //
+  // A reason is presentation, and this document is a gate. Carrying one would put an
+  // enumeration of somebody else's vocabulary inside a name that cannot be taken back, and a
+  // holder that needs reasons has its own state to keep them in.
+
+  "requires": [
+    { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.State",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Logic",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Binding",    "version": "^1.0" }
+  ],
+
+  "state": {
+    "schema": {
+      // What may be requested. The instance, not the domain.
+      "subjects": { "op": "type.list", "element": { "op": "type.string", "minLength": 1 } },
+
+      "stage": { "op": "type.enum", "values": ["draft", "review", "granted", "denied"] },
+
+      // What was requested. Null until `raise`, and never written again — a request is one
+      // request, and a second one is a second case.
+      "subject": { "op": "type.string", "minLength": 1, "nullable": true }
+    },
+
+    "initial": {
+      "subjects": [],
+      "stage": "draft",
+      "subject": null
+    }
+  },
+
+  "inputs": {
+    // The domain is the state, read directly. There is nothing for a definition to share
+    // and nothing to compute: what may be requested is the list of what may be requested.
+    "raise": {
+      "params": { "subject": { "domain": "$subjects" } },
+      "when": { "op": "cmp.eq", "left": "$stage", "right": "draft" },
+      "effects": [
+        { "op": "state.set", "path": "subject", "value": "@subject" },
+        { "op": "state.set", "path": "stage", "value": "review" }
+      ]
+    },
+
+    "grant": {
+      "when": { "op": "cmp.eq", "left": "$stage", "right": "review" },
+      "effects": [ { "op": "state.set", "path": "stage", "value": "granted" } ]
+    },
+
+    "deny": {
+      "when": { "op": "cmp.eq", "left": "$stage", "right": "review" },
+      "effects": [ { "op": "state.set", "path": "stage", "value": "denied" } ]
+    }
+  },
+
+  // What a host shows of a position, so that no screen reads the state to find out. Each is
+  // the field itself: there is nothing to work out about a request that the state does not
+  // already say, and saying it here is what keeps a host from saying it somewhere else.
+  "projections": {
+    "subjects": "$subjects",
+    "stage": "$stage",
+    "subject": "$subject"
+  },
+
+  // Both endings, because a holder asking "is this finished" should not have to know which
+  // of them it reached. Which one it was is `result`, and it is the stage itself.
+  //
+  // A composite does not consult this: `GetValidInputs` never reads `terminal`, and a
+  // component's own ending says nothing about its holder's. It is here for the case where
+  // this document is run on its own, which is also the case a holder reasons about.
+  "terminal": {
+    "when": {
+      "op": "logic.or",
+      "any": [
+        { "op": "cmp.eq", "left": "$stage", "right": "granted" },
+        { "op": "cmp.eq", "left": "$stage", "right": "denied" }
+      ]
+    },
+    "result": "$stage"
+  }
+}

@@ -67,18 +67,11 @@
 
     private BoardShape Shape => Board.Shape;
 
-    // A square two moves share would need a choice the board cannot offer, so those stay with the actions.
-    private ValidInput? MoveOn(string coord)
-    {
-        if (Board.Play is not SquareMove play || Moves is null)
-        {
-            return null;
-        }
+    private IReadOnlyDictionary<string, ValidInput> squareMoves = new Dictionary<string, ValidInput>();
 
-        var on = Moves.Where(m => m.Input == play.Input && m.IsComplete
-            && m.Arguments.TryGetValue(play.Parameter, out string? at) && Display.Unquote(at) == coord).Take(2).ToList();
-        return on.Count == 1 ? on[0] : null;
-    }
+    protected override void OnParametersSet() => squareMoves = Board.SquareMoves(Moves);
+
+    private ValidInput? MoveOn(string coord) => squareMoves.GetValueOrDefault(coord);
 
     private static string Text(JsonNode cell) =>
         cell is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : cell.ToJsonString();

@@ -1,0 +1,94 @@
+{
+  "$schema": "rulealize/ruleset/v1",
+  "id": "tictactoe",
+  "version": "1.0.0",
+
+  // Three in a row on a three-by-three board. Written for Rulpane, as the second board game the
+  // grid-game template is held against: another size, other pieces, and an ending of its own.
+  // It projects the turn under the name the template expects; a board cannot be projected, so
+  // the view that applies the template binds that to the state field.
+
+  "requires": [
+    { "plugin": "Rulealize.Plugin.Binding",    "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Branch",     "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Definition", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Logic",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Sequence",   "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.State",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Grid",       "version": "^1.2" }
+  ],
+
+  "state": {
+    "schema": {
+      "board": {
+        "op": "grid.board",
+        "width": 3, "height": 3, "coord": "algebraic",
+        "cell": { "op": "type.enum", "values": ["x", "o"], "nullable": true }
+      },
+      "turn":   { "op": "type.enum", "values": ["x", "o"] },
+      "winner": { "op": "type.enum", "values": ["x", "o"], "nullable": true }
+    },
+    "initial": { "board": {}, "turn": "x", "winner": null }
+  },
+
+  "definitions": {
+    "me":       { "op": "state.get", "path": "turn" },
+    "opponent": { "op": "branch.match", "value": "#me", "cases": { "x": "o", "o": "x" } },
+
+    // grid.run does not read the square itself, so this asks what placing there would make.
+    "aligned": {
+      "params": ["at"],
+      "body": {
+        "op": "seq.any",
+        "source": { "op": "grid.directions", "of": "$board", "kind": "axis" }, "as": "d",
+        "predicate": { "op": "cmp.gte", "right": 3, "left":
+          { "op": "grid.run", "grid": "$board", "from": "@at", "axis": "@d", "value": "#me" } }
+      }
+    },
+
+    "full": {
+      "body": {
+        "op": "logic.not", "value": {
+          "op": "seq.any", "source": { "op": "grid.coords", "of": "$board" }, "as": "c",
+          "predicate": { "op": "cmp.isNull", "value": { "op": "grid.at", "grid": "$board", "coord": "@c" } } }
+      }
+    }
+  },
+
+  "inputs": {
+    "place": {
+      "actor": "#me",
+      "params": {
+        "at": { "domain": { "op": "grid.coords", "of": "$board" } }
+      },
+      "when": { "op": "cmp.isNull", "value": { "op": "grid.at", "grid": "$board", "coord": "@at" } },
+      "effects": [
+        { "op": "grid.set", "target": "$board", "coord": "@at", "value": "#me" },
+        { "op": "state.set", "path": "winner", "value": {
+            "op": "branch.if", "cond": { "op": "def.call", "def": "aligned", "args": { "at": "@at" } },
+            "then": "#me" } },
+        { "op": "state.set", "path": "turn", "value": "#opponent" }
+      ]
+    }
+  },
+
+  "projections": {
+    "turn": "$turn"
+  },
+
+  "terminal": {
+    "when": {
+      "op": "logic.or",
+      "any": [
+        { "op": "logic.not", "value": { "op": "cmp.isNull", "value": "$winner" } },
+        "#full"
+      ]
+    },
+    "result": {
+      "op": "branch.if", "cond": { "op": "cmp.isNull", "value": "$winner" },
+      "then": "draw", "else": "$winner"
+    }
+  }
+}

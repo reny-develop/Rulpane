@@ -1,0 +1,95 @@
+{
+  "$schema": "rulealize/ruleset/v1",
+  "id": "Rulealize.RuleSet.Checklist",
+  "version": "1.0.0",
+
+  // Named steps, each done once, and an ending when none are left.
+  //
+  // The shape every onboarding, every closing procedure and every release runbook has
+  // underneath whatever else it has. What the steps *are* is the instance's, so a rule set
+  // that knows about "collect the passport" is a rule set that describes one company; this one
+  // describes the shape and takes the list.
+  //
+  // ── Any order, deliberately ──
+  //
+  // Every open step is offered at once. A checklist with an order is a different thing — that
+  // one is a pipeline, and `Rulealize.RuleSet.Stage` is the shape of it — and a holder that
+  // needs *some* order writes it in `held`, where the guard can see the rest of its own state
+  // and this document's at once. That is the ordering worth having: "you may not ship before
+  // the invoice is paid" is about two documents, and this one has never heard of an invoice.
+  //
+  // ── No set vocabulary, so absence does the work ──
+  //
+  // `open` is the steps not in `done`, filtered rather than subtracted, because `set` is a
+  // reserved namespace with nothing behind it. It costs one nested predicate and it is what
+  // makes completing a step twice a move that is never listed rather than one that is refused.
+  //
+  // ── A step nobody listed is not a step ──
+  //
+  // The domain is `open`, so `complete` can only ever name something out of `steps`. There is
+  // nothing to validate and no error to write: a checklist and a list of what may be ticked
+  // are one list, and it is the state document's.
+
+  "requires": [
+    { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.State",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Logic",      "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Binding",    "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Definition", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Sequence",   "version": "^1.0" }
+  ],
+
+  "state": {
+    "schema": {
+      // What has to be done. The instance, not the domain.
+      "steps": { "op": "type.list", "element": { "op": "type.string", "minLength": 1 } },
+
+      // What has been. In the order it was done, which is a fact worth keeping — a checklist
+      // that only knew *whether* it was finished would throw away the one thing an audit wants.
+      "done": { "op": "type.list", "element": { "op": "type.string", "minLength": 1 } }
+    },
+
+    // Nothing to do, and therefore finished: an empty checklist is terminal on the first
+    // question anybody asks it. That is the right answer and it is worth knowing it is the one
+    // a holder inherits until its state document says otherwise.
+    "initial": { "steps": [], "done": [] }
+  },
+
+  "definitions": {
+    "open": {
+      "op": "seq.where", "source": "$steps", "as": "s",
+      "predicate": {
+        "op": "logic.not",
+        "value": {
+          "op": "seq.any", "source": "$done", "as": "d",
+          "predicate": { "op": "cmp.eq", "left": "@d", "right": "@s" }
+        }
+      }
+    }
+  },
+
+  "inputs": {
+    "complete": {
+      "params": { "step": { "domain": "#open" } },
+      "effects": [
+        {
+          "op": "state.set", "path": "done",
+          "value": { "op": "seq.concat", "of": ["$done", { "op": "seq.of", "of": ["@step"] }] }
+        }
+      ]
+    }
+  },
+
+  // Counted rather than compared as lists, because `done` only ever grows by a step out of
+  // `open` and so cannot hold anything `steps` does not. Two numbers is the cheaper question
+  // and it is the same question.
+  "terminal": {
+    "when": {
+      "op": "cmp.eq",
+      "left": { "op": "seq.count", "source": "$done" },
+      "right": { "op": "seq.count", "source": "$steps" }
+    },
+    "result": "done"
+  }
+}

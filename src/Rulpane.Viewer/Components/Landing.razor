@@ -1,6 +1,7 @@
 @using System.Text.Json
 @using System.Text.Json.Nodes
 @using Rulealize
+@inject HttpClient Http
 @* What a link with nothing in it shows: the bundled samples, and a way to put rules of your own in a link. *@
 
 <div class="landing">
@@ -57,6 +58,30 @@
 
     <section class="section">
         <div class="section-head">
+            <h2>Templates</h2>
+            <p>A view written for no one rule set: it says what it expects, and any rules that have it can use it, under their own names.</p>
+        </div>
+        <ul class="samples">
+            @foreach (Sample sample in Templated)
+            {
+                <li>
+                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View), ("s", sample.Data is null ? null : Fragment.Pack(sample.Data))))">
+                        <span class="sample-head">@sample.Name + @sample.Tags[0]<Icon Name="arrow" /></span>
+                        <p>@sample.Description</p>
+                        <span class="tags">
+                            @foreach (string tag in sample.Tags.Skip(1))
+                            {
+                                <span class="chip">@tag</span>
+                            }
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
             <h2>Make a link from your own rules</h2>
             <p>Paste a rule set, and a view and a theme if you have them. All are checked here first, so a link this page hands out is one that opens.</p>
         </div>
@@ -83,7 +108,7 @@
 </div>
 
 @code {
-    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null);
+    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null, string? Data = null);
 
     // Each describes the document of the same name in wwwroot/rulesets, its view the one in wwwroot/views, and its theme the one in wwwroot/themes.
     private static readonly Sample[] Samples =
@@ -92,6 +117,7 @@
         new("countdown", "Count to ten, one to three at a time.", ["1 input"]),
         new("reversi", "Reversi on an eight-by-eight board, for two.", ["grid", "actors"]),
         new("blackjack", "Cards are drawn in your browser, weighted by the rules.", ["chance", "actors"]),
+        new("tictactoe", "Three in a row, for two.", ["grid", "actors"]),
         new("roster", "A shift roster: put staff on the shifts still open.", ["records"]),
         new("approval", "The same rules, laid out by a view: a claim, its stage, the review.", ["view", "showWhen"], View: "approval"),
         new("countdown", "The total set large; the moves under it.", ["view", "stats"], View: "countdown"),
@@ -99,6 +125,22 @@
         new("reversi", "The board drawn square by square: choose a square to place there.", ["view", "board"], View: "reversi"),
         new("approval", "The claim again, on paper: warm colours, a serif, square corners.", ["theme"], View: "approval", Theme: "paper"),
         new("roster", "The roster, rounder and closer together, in green.", ["theme", "compact"], View: "roster", Theme: "meadow"),
+    ];
+
+    // A template's name comes first among the tags. The official rule sets open with nothing in
+    // them, since what is requested, signed or ticked off is the state's to say, so these start
+    // from the example in each one's repository.
+    private static readonly Sample[] Templated =
+    [
+        new("request", "Rulealize.RuleSet.Request, which projects its stage under that very name.", ["stages", "official", "as it is"], View: "stages",
+            Data: """{"subjects":["mon-am","mon-pm","tue-am"],"stage":"draft","subject":null}"""),
+        new("approval", "The same template on the approval rules, which keep the stage in summary.", ["stages", "bind"], View: "approval-stages"),
+        new("checklist", "Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", ["progress", "official", "bind $"], View: "checklist-progress",
+            Data: """{"steps":["contract","equipment","induction","payroll"],"done":["contract"]}"""),
+        new("signatures", "Rulealize.RuleSet.Signatures: the same template, counting who has signed.", ["progress", "official", "bind"], View: "signatures-progress",
+            Data: """{"signatories":["ann","bo","cy"],"required":2,"signed":[],"outcome":"open"}"""),
+        new("tictactoe", "A board game that projects its turn by the name the template expects; the board is bound to its state field.", ["grid-game", "bind $"], View: "tictactoe-grid-game"),
+        new("reversi", "The same template on reversi, whose board and turn are state fields. Passing is under the board.", ["grid-game", "bind $"], View: "reversi-grid-game"),
     ];
 
     // approval, submitted and waiting for review.
@@ -133,7 +175,7 @@
     }
 
     // Compiled before a link is made, so a link this page hands out is one that opens.
-    private void Make()
+    private async Task Make()
     {
         problem = null;
         link = null;
@@ -143,7 +185,8 @@
             string? view = null;
             if (!string.IsNullOrWhiteSpace(viewDocument))
             {
-                View.Parse(viewDocument, context, document);
+                string? template = View.TemplateOf(viewDocument) is string name ? await Source.View(name).ReadAsync(Http) : null;
+                View.Parse(viewDocument, context, document, template);
                 view = Fragment.Pack(Minify(viewDocument));
             }
 

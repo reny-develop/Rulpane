@@ -8,6 +8,7 @@ https://<user>.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_P
 https://<user>.github.io/Rulpane/#r=approval&v=approval
 https://<user>.github.io/Rulpane/#r=reversi&v=reversi
 https://<user>.github.io/Rulpane/#r=approval&v=approval&t=paper
+https://<user>.github.io/Rulpane/#r=approval&v=approval-stages
 ```
 
 ## The URL
@@ -29,7 +30,7 @@ Without a view, the screen is generated from the rule set:
 
 - its `projections` are shown if it has any; otherwise the state is shown as it is
 - the results of `GetValidInputs` are shown as buttons, grouped by actor and then by input; no move is set apart from the others, because the rules do not rank them
-- an input with `open` parameters is shown as a form, and a refusal the rules name against a parameter is shown under its field
+- an input with `open` parameters is shown as a form, and a refusal the rules name against a parameter is shown under its field; a parameter whose schema is a `type.enum` is a list of the values it allows, rather than a box to type in
 - an input that draws picks one outcome in the browser, weighted by the probabilities from `GetOutcomes`
 - a terminal state shows its result
 
@@ -37,7 +38,7 @@ On a narrow screen the title, the last move and the moves stay pinned while the 
 
 ## Views
 
-A view (`rulealize/view/v1`, still a draft) lays the screen out. It holds bindings and appearance, and no conditions: a block that should show only sometimes binds `showWhen` to a value the rules project, so the screen never restates the rules.
+A view (`rulealize/view/v1`) lays the screen out. It holds bindings and appearance, and no conditions: a block that should show only sometimes binds `showWhen` to a value the rules project, so the screen never restates the rules.
 
 ```jsonc
 {
@@ -62,9 +63,10 @@ A binding is a projection then `.`-separated steps into it (`summary.stage`), or
 | `text` | `text` as a paragraph |
 | `fields` | A card of `rows`, each a `label` and a `bind`. With `tone`, the value is a chip coloured by it: `neutral`, `accent`, `ok`, `warn` or `danger` |
 | `stats` | `items`, each a `label` and a `bind`, set large |
+| `list` | The list at `bind`, its values side by side |
 | `table` | The list at `bind`, one record per line. `columns` are keys, or `{ "key", "label" }`; without them, every key |
 | `board` | The Grid board in the state field at `bind` (`$board`), square by square; its size and coordinates come from the field's `grid.board` schema. `play` (`"place.at"`, an input and its parameter) makes each square that input can be played on a button, when exactly one of its moves is played there. `pieces` maps a value to a piece, `dark`, `light`, `accent`, `ok`, `warn` or `danger`; a value it leaves out is shown as text |
-| `actions` | The moves of `inputs`, a list of input names or `"*"` for all. A block naming inputs none of which can be played now is not shown |
+| `actions` | The moves of `inputs`, a list of input names or `"*"` for every move a board on the screen does not already offer as a square. A block naming inputs none of which can be played now is not shown, and neither is `"*"` when the boards offer every move. With `"as": "select"`, the choices of an input with arguments are one list to pick from and a button to play the one picked, in place of a button each (`"buttons"`, the default) |
 
 Every block, and every row of `fields`, takes `showWhen`, a binding: it is shown only while that reads `true`. The game's end and its result are shown above the layout whatever the view says.
 
@@ -89,6 +91,51 @@ The labels a view writes are its own, but the rules' names reach the screen too:
 | `values` | Not checked: values come from the state. A value is looked up by the text the screen would show, so a number can be named too |
 
 A name the view leaves out is shown as the rules spell it. A `tone` and a board's `pieces` still key on the value the rules hold, not on its name. The screen without a view shows every name as it is.
+
+### Templates
+
+A template is a view written for no one rule set. In place of `ruleSet` it says what it `expects` — the projections it reads, each with a type, and the inputs it names — and binds nothing else: no state field, no projection it did not list. Any rules that have what it expects can use it.
+
+```jsonc
+{
+  "$schema": "rulealize/view/v1",
+  "expects": {
+    "projections": { "board": "board", "turn": "string" },  // a name and a type each
+    "inputs": { "place": ["at"] }                          // an input and the parameters the template uses
+  },
+  "layout": [
+    { "c": "fields", "rows": [ { "label": "To move", "bind": "turn" } ] },
+    { "c": "board", "bind": "board", "play": "place.at", "pieces": { "black": "dark", "white": "light" } },
+    { "c": "actions", "title": "Other moves", "inputs": "*" }
+  ]
+}
+```
+
+| Type | A value of it is |
+| --- | --- |
+| `string`, `number`, `bool` | That scalar |
+| `any` | Anything, null included |
+| `list<T>` | A list of `T` |
+| `{a, b: T}` | A record with these keys; a key with no type may hold anything |
+| `board` | A Grid board: a state field the rules declare with `grid.board`, which no projection can be. Only the whole of a type can be one |
+| `T?` | `T`, or null |
+
+A template's bindings are checked against its types before any rules are seen, so a row cannot bind a key the record does not have, a `list` block a string, or a `showWhen` anything but a `bool`. When it is opened, every projection it expects must be one the rules have and every input one they offer, and at every position each value the rules give must be of its type; a value that is not stops the screen with the projection that failed. Its `names` are not checked against any rules.
+
+Rules that keep what a template expects under other names take it through a view that applies it: `template` names a template bundled with Rulpane, and `bind` says where these rules keep each projection, as any binding of theirs — another projection, a path into one, or a state field. A projection it does not bind is read by its own name. Its `title` replaces the template's, and its `names`, checked against the rules as any view's are, go over the template's one by one.
+
+```jsonc
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "reversi@1",
+  "template": "grid-game",
+  "bind": { "projections": { "board": "$board", "turn": "$turn" } },
+  "title": "Reversi",
+  "names": { "values": { "black": "Black", "white": "White" } }
+}
+```
+
+An input a template expects is matched by its name alone. The bundled templates are `stages` (a stage and the moves), `progress` (the items done and all of them, from a checklist or a sign-off) and `grid-game` (a board played by choosing a square).
 
 ## Themes
 
