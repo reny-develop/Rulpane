@@ -1,6 +1,6 @@
 {
   "$schema": "rulealize/view/v1",
-  // A template for a game on a Grid board, taken in turns by choosing a square.
+  // A view for a game on a Grid board, taken in turns by choosing a square.
   // Any other move, such as a pass, is under the board: "*" leaves out what the squares offer.
   "expects": {
     "projections": { "board": "board", "turn": "string" },

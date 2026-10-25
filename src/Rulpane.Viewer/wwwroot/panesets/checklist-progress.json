@@ -1,0 +1,8 @@
+{
+  "$schema": "rulpane/paneset/v1",
+  // Checklist projects nothing, so the lists the progress view reads are its state fields.
+  "r": "checklist",
+  "v": "progress",
+  "b": { "all": "$steps", "done": "$done" },
+  "s": { "steps": ["contract", "equipment", "induction", "payroll"], "done": ["contract"] }
+}

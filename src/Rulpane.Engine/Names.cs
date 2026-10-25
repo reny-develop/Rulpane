@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Rulealize;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// What a view calls the names the rules use, in the one language its author writes in. Each

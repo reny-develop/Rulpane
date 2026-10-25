@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// Everything a screen is made from travels in the URL fragment, which the browser never sends
@@ -59,13 +59,14 @@ public static class Fragment
         return reader.ReadToEnd();
     }
 
-    // Base64url and ':' are left as they are, so a link stays readable and short.
+    // Base64url, ':', '@' and '/' are left as they are, so a link stays readable and short: a
+    // fragment may hold all of them, and a name such as octocat/kanban@1 reads as written.
     private static string Escape(string value)
     {
         var builder = new StringBuilder(value.Length);
         foreach (char c in value)
         {
-            if (char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or '~' or ':' or '@')
+            if (char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or '~' or ':' or '@' or '/')
             {
                 builder.Append(c);
             }

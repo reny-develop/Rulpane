@@ -32,6 +32,18 @@ jobs:
       - name: Mirror the Registry's rule sets
         run: dotnet run --project tool/Mirror -c Release -- publish/wwwroot/registry
 
+      # The Gallery's releases, for a view, a theme or a paneset named <owner>/<name>@<version>.
+      # The Gallery keeps its own copy of each in git, so this reads a checkout of it. While the
+      # Gallery is private that takes RULPANE_GALLERY_READ_TOKEN, a token that can read it.
+      - uses: actions/checkout@v4
+        with:
+          repository: reny-develop/Rulpane.Gallery
+          path: gallery
+          token: ${{ secrets.RULPANE_GALLERY_READ_TOKEN || github.token }}
+
+      - name: Mirror the Gallery
+        run: dotnet run --project tool/Mirror -c Release -- --gallery publish/wwwroot/gallery gallery
+
       # A project site is served under /<repository>/, and the viewer resolves everything —
       # its framework files and the bundled rule sets — against <base>.
       - name: Point base at the repository path

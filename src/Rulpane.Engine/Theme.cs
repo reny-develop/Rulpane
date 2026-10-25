@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// A theme document, <c>rulealize/theme/v1</c>: the colours, corners, typeface and spacing of

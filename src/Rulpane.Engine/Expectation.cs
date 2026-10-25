@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>What kind of value an expectation is about.</summary>
 public enum Kind { Any, String, Number, Bool, Board, List, Record }

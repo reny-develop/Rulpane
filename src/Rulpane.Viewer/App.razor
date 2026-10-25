@@ -19,7 +19,7 @@
     @if (session is not null && Unverified)
     {
         @* In the bar, which only Rulpane draws, so nothing a link lays out can cover it or imitate it. *@
-        <Provenance Documents="Carried" Published="Published" InLink="InLink" />
+        <Provenance Documents="Carried" Published="Published" Gallery="gallery" InLink="InLink" />
     }
     else if (session is not null)
     {
@@ -76,7 +76,7 @@
                                 <span class="chip accent dot">@Say("In progress", "進行中")</span>
                             }
                         </div>
-                        <span class="sub">@session.Context.RuleSet · @(source is { IsBundled: true } ? Say("bundled", "同梱") : source is { IsRegistered: true } ? Say("from the Registry", "Registry から") : Say("embedded in the link", "リンクに埋め込み"))@(viewSource is null ? null : viewSource.IsBundled ? Say($" · view {viewSource.Value}", $" · ビュー {viewSource.Value}") : Say(" · view embedded in the link", " · ビューはリンクに埋め込み"))@(themeSource is null ? null : themeSource.IsBundled ? Say($" · theme {themeSource.Value}", $" · テーマ {themeSource.Value}") : Say(" · theme embedded in the link", " · テーマはリンクに埋め込み"))</span>
+                        <span class="sub">@Subtitle</span>
                     </div>
                     <div class="actions">
                         <button @onclick="Restart" title="@Say("Start over", "最初から")"><Icon Name="restart" /><span class="label">@Say("Start over", "最初から")</span></button>
@@ -150,8 +150,9 @@
 
     // Compiling is the expensive part, and a rule set does not change while its state does.
     private readonly Dictionary<string, RuleContext> compiled = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string Rules, string View), View> views = [];
+    private readonly Dictionary<(string Rules, string View, string Bind), View> views = [];
     private readonly Dictionary<string, Theme> themes = [];
+    private readonly Dictionary<string, Paneset> panesets = new(StringComparer.Ordinal);
     private readonly Dictionary<Source, string> texts = [];
     // What each rule set holds through uses, read from the Registry's copy.
     private readonly Dictionary<string, IReadOnlyList<Document>> holds = new(StringComparer.Ordinal);
@@ -165,11 +166,18 @@
     // Codes the rules refused with that belong to no one field, or what went wrong instead.
     private IReadOnlyList<string>? rejection;
     private bool copied;
+    // What the link says of itself, and the paneset its p names, if it names one: the screen is
+    // that paneset with the link's own keys put over it.
+    private IReadOnlyDictionary<string, string> link = new Dictionary<string, string>();
+    private Paneset linked = Paneset.Empty;
+    private Source? paneSource;
     private Source? source;
     private Source? viewSource;
     private Source? themeSource;
     private Theme? theme;
     private View? view;
+    // The releases from the Gallery the screen is made with, with who published them.
+    private List<Published> gallery = [];
     private Session? session;
     private TerminalStatus terminal;
     private List<ValidInput>? moves;
@@ -184,11 +192,15 @@
     // The rule set's id: the identity without the version the sub-title already gives.
     private string Id => session!.Context.Id;
 
-    // Whether anything on screen arrived in the link, or from the Registry, rather than with the viewer.
-    private bool Unverified => source is { IsBundled: false } || viewSource is { IsBundled: false } || themeSource is { IsBundled: false } || Held.Count > 0;
+    // Whether anything on screen arrived in the link, from the Registry or from the Gallery, rather than with the viewer.
+    private bool Unverified => InLink || source is { IsRegistered: true } || Held.Count > 0 || gallery.Count > 0;
 
-    // Whether any document was written into the link itself, rather than named by it.
-    private bool InLink => source is { IsBundled: false, IsRegistered: false } || viewSource is { IsBundled: false } || themeSource is { IsBundled: false };
+    // Whether any document was written into the link itself, rather than named by it. A part a
+    // paneset writes in place is its author's: the link's only when the paneset is in the link too.
+    private bool InLink =>
+        paneSource is { IsPacked: true }
+        || new[] { linked.Rules, linked.View, linked.Theme }.Any(v => v?.StartsWith(Fragment.PackedPrefix, StringComparison.Ordinal) == true)
+        || linked.Bind.Count > 0;
 
     private IReadOnlyList<Document> Held => source is null ? [] : holds.GetValueOrDefault(source.Value, []);
 
@@ -199,10 +211,28 @@
 
     // The documents this screen is made from, as their author wrote them, for whoever wants to read them.
     private List<(string Name, string Text)> Carried =>
-        [(Say("Rules", "ルール"), texts[source!]),
+        [.. paneSource is null ? [] : new[] { (Named(Say("Paneset", "ペインセット"), paneSource), texts[paneSource]) },
+         (Named(Say("Rules", "ルール"), source!), texts[source!]),
          .. Held.Select(d => (Say($"Held: {d.Id} {d.Version}", $"取り込み：{d.Id} {d.Version}"), d.Text)),
-         .. viewSource is null ? [] : new[] { (Say("View", "ビュー"), texts[viewSource]) },
-         .. themeSource is null ? [] : new[] { (Say("Theme", "テーマ"), texts[themeSource]) }];
+         .. viewSource is null ? [] : new[] { (Named(Say("View", "ビュー"), viewSource), texts[viewSource]) },
+         .. linked.Bind.Count == 0 ? [] : new[] { (Say("Bindings (b)", "付け替え（b）"), Fragment.Unpack(link["b"])) },
+         .. themeSource is null ? [] : new[] { (Named(Say("Theme", "テーマ"), themeSource), texts[themeSource]) }];
+
+    private static string Named(string what, Source source) =>
+        source.IsRegistered || source.IsGallery ? $"{what}: {source.Reference.Id} {source.Reference.Version}" : what;
+
+    // Which rules, and where each part came from: bundled, published, written into the paneset, or into the link.
+    private string Subtitle =>
+        $"{session!.Context.RuleSet} · {From(source!, linked.Rules is not null, Say("bundled", "同梱"))}"
+        + (paneSource is null ? "" : paneSource.IsPacked ? Say(" · paneset embedded in the link", " · ペインセットはリンクに埋め込み") : Say($" · paneset {paneSource.Value}", $" · ペインセット {paneSource.Value}"))
+        + (viewSource is null ? "" : viewSource.IsPacked ? Say(" · view ", " · ビューは") + From(viewSource, linked.View is not null, "") : Say($" · view {viewSource.Value}", $" · ビュー {viewSource.Value}"))
+        + (themeSource is null ? "" : themeSource.IsPacked ? Say(" · theme ", " · テーマは") + From(themeSource, linked.Theme is not null, "") : Say($" · theme {themeSource.Value}", $" · テーマ {themeSource.Value}"));
+
+    private static string From(Source part, bool fromLink, string bundled) =>
+        part.IsBundled ? bundled
+        : part.IsRegistered ? Say("from the Registry", "Registry から")
+        : fromLink ? Say("embedded in the link", "リンクに埋め込み")
+        : Say("written in the paneset", "ペインセットに記述");
 
     private IJSObjectReference? module;
     private IJSObjectReference? listener;
@@ -289,11 +319,14 @@
         session = null;
         view = null;
         viewSource = null;
+        paneSource = null;
+        gallery = [];
         themeSource = null;
         theme = null;
 
         var fragment = Fragment.Parse(fragmentText);
-        if (!fragment.TryGetValue("r", out string? rules))
+        link = fragment;
+        if (!fragment.ContainsKey("r") && !fragment.ContainsKey("p"))
         {
             source = null;
             return true;
@@ -301,6 +334,26 @@
 
         try
         {
+            linked = Paneset.FromLink(fragment);
+            Paneset ground = Paneset.Empty;
+            if (fragment.TryGetValue("p", out string? named))
+            {
+                paneSource = Source.Paneset(named);
+                if (!panesets.TryGetValue(named, out ground!))
+                {
+                    texts[paneSource] = await paneSource.ReadAsync(Http);
+                    ground = Paneset.Parse(texts[paneSource]);
+                    panesets[named] = ground;
+                }
+
+                if (paneSource.IsGallery)
+                {
+                    gallery.Add(await paneSource.PublishedAsync(Http));
+                }
+            }
+
+            Paneset screen = ground.Over(linked);
+            string rules = screen.Rules ?? throw new FormatException("r: the paneset names no rules, and the link gives none.");
             source = Source.Rules(rules);
             if (!compiled.TryGetValue(rules, out RuleContext? context))
             {
@@ -310,19 +363,28 @@
                 compiled[rules] = context;
             }
 
-            if (fragment.TryGetValue("v", out string? layout))
+            if (screen.View is string layout)
             {
                 viewSource = Source.View(layout);
-                if (!views.TryGetValue((rules, layout), out view))
+                string bind = screen.Bind.Count == 0 ? "" : Paneset.PackBind(screen.Bind);
+                if (!views.TryGetValue((rules, layout, bind), out view))
                 {
                     texts[viewSource] = await viewSource.ReadAsync(Http);
-                    string? template = View.TemplateOf(texts[viewSource]) is string name ? await Source.View(name).ReadAsync(Http) : null;
-                    view = View.Parse(texts[viewSource], context, texts[source], template);
-                    views[(rules, layout)] = view;
+                    view = View.Parse(texts[viewSource], context, texts[source], screen.Bind);
+                    views[(rules, layout, bind)] = view;
+                }
+
+                if (viewSource.IsGallery)
+                {
+                    gallery.Add(await viewSource.PublishedAsync(Http));
                 }
             }
+            else if (screen.Bind.Count > 0)
+            {
+                throw new FormatException("b: there is no view for it to bind; v names none.");
+            }
 
-            if (fragment.TryGetValue("t", out string? look))
+            if (screen.Theme is string look)
             {
                 themeSource = Source.Theme(look);
                 if (!themes.TryGetValue(look, out theme))
@@ -331,9 +393,14 @@
                     theme = Theme.Parse(texts[themeSource]);
                     themes[look] = theme;
                 }
+
+                if (themeSource.IsGallery)
+                {
+                    gallery.Add(await themeSource.PublishedAsync(Http));
+                }
             }
 
-            session = Session.Open(context, fragment.GetValueOrDefault("s"));
+            session = Session.Open(context, screen.State);
             terminal = session.Terminal;
             ValidInputSet? valid = terminal.IsTerminal ? null : session.ValidInputs();
             moves = valid?.ToList();
@@ -424,6 +491,9 @@
         copied = true;
     }
 
+    // The link as it was, with only the position changed: what it named stays named, and a
+    // paneset stays the ground its own keys go over. Without a position, the paneset's start.
     private string FragmentFor(string? packedData) =>
-        Fragment.Build(("r", source!.Value), ("v", viewSource?.Value), ("t", themeSource?.Value), ("s", packedData));
+        Fragment.Build(("p", link.GetValueOrDefault("p")), ("r", link.GetValueOrDefault("r")), ("v", link.GetValueOrDefault("v")),
+            ("t", link.GetValueOrDefault("t")), ("b", link.GetValueOrDefault("b")), ("s", packedData));
 }

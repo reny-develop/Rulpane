@@ -35,6 +35,11 @@
                     <p>@Say($"{(InLink ? "The link also names" : "The link names")} rules published to the Rulealize Registry: {string.Join(", ", Published)}. Whoever published them wrote them. The Registry checks that a package is the one it says it is, and nobody reviews what its rules do.",
                            $"このリンクは{(InLink ? "ほかに、" : "")} Rulealize Registry に公開されたルールを指しています：{string.Join("、", Published)}。書いたのは公開した人です。Registry はパッケージが名乗りどおりのものかを確かめますが、ルールの中身を審査する人はいません。")</p>
                 }
+                @foreach (Published release in Gallery)
+                {
+                    <p>@Say($"The {release.Kind} {release.Id} {release.Version} is from the Rulpane Gallery, published by the GitHub account {release.Owner} from {release.Repository} under {release.License}. Its author wrote every word of it. The Gallery checks it by machine, and nobody reviews it.",
+                           $"{KindJa(release.Kind)} {release.Id} {release.Version} は Rulpane Gallery のものです。GitHub アカウント {release.Owner} が {release.Repository} から {release.License} で公開しました。文言はすべて作者が書いたものです。Gallery は機械で検証しますが、審査する人はいません。")</p>
+                }
             </div>
             <div class="details-section">
                 <h3>@Say("What Rulpane makes sure of", "Rulpane が保証すること")</h3>
@@ -70,6 +75,9 @@
     /// <summary>The rule sets from the Registry the screen runs, each as its identifier and version.</summary>
     [Parameter] public IReadOnlyList<string> Published { get; set; } = [];
 
+    /// <summary>The releases from the Gallery the screen is made with: its paneset, view and theme, as far as each is one.</summary>
+    [Parameter] public IReadOnlyList<Published> Gallery { get; set; } = [];
+
     /// <summary>Whether any document was written into the link itself, rather than only named by it.</summary>
     [Parameter] public bool InLink { get; set; } = true;
 
@@ -89,6 +97,13 @@
     }
 
     // A document from a link is minified; indented, a person can read it. Comments are not kept.
+    private static string KindJa(string kind) => kind switch
+    {
+        "view" => "ビュー",
+        "theme" => "テーマ",
+        _ => "ペインセット",
+    };
+
     private static string Indent(string text)
     {
         try

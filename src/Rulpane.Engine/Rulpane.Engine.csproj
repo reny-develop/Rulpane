@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    What the viewer runs a link with, apart from how it is drawn: the curated runtime, the
+    documents a fragment names, and the readers of views and themes. A library, so that
+    whatever has to judge a document the way the viewer will — the template catalogue's
+    admission, for one — reads it with this code rather than a copy of it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Rulealize" Version="0.14.0" />
+    <PackageReference Include="Rulealize.Plugin.Arithmetic" Version="1.1.0" />
+    <PackageReference Include="Rulealize.Plugin.Binding" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Branch" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Chance" Version="1.1.0" />
+    <PackageReference Include="Rulealize.Plugin.Comparison" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Deck" Version="1.0.0" />
+    <PackageReference Include="Rulealize.Plugin.Definition" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Graph" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Grid" Version="1.2.0" />
+    <PackageReference Include="Rulealize.Plugin.Logic" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Record" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Secret" Version="1.0.0" />
+    <PackageReference Include="Rulealize.Plugin.Sequence" Version="1.4.0" />
+    <PackageReference Include="Rulealize.Plugin.State" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.Text" Version="1.0.0" />
+    <PackageReference Include="Rulealize.Plugin.Tuple" Version="1.0.1" />
+    <PackageReference Include="Rulealize.Plugin.TypeSchema" Version="1.3.0" />
+  </ItemGroup>
+
+</Project>

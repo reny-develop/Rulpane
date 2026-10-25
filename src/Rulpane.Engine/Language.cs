@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// The language Rulpane's own words are in: Japanese for a browser that asks for it first,

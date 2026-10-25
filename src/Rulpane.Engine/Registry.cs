@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Rulealize;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>One rule set document, under the identity it declares.</summary>
 public sealed record Document(string Id, string Version, string Text);

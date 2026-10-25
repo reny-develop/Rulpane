@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>How text the runtime renders in its JSON form is put on screen.</summary>
 public static class Display

@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Rulealize;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>One compiled rule set and the position it is at.</summary>
 public sealed class Session

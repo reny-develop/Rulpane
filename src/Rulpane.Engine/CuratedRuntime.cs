@@ -17,7 +17,7 @@ using Rulealize.Plugin.Text;
 using Rulealize.Plugin.Tuple;
 using Rulealize.Plugin.TypeSchema;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// The vocabulary a URL may draw on. Plugins are added by instance, never loaded from anything

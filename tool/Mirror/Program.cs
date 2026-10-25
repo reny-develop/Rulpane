@@ -2,6 +2,7 @@
 // so that `r=<id>@<version>` can be read from Rulpane's own origin.
 //
 //   dotnet run --project tool/Mirror -- <folder> [<registry>]
+//   dotnet run --project tool/Mirror -- --gallery <folder> [<gallery>]
 //
 // The Registry's catalogue says which versions exist and which are withheld; the documents
 // themselves are inside the packages on nuget.org, which a page cannot fetch (the CSP lets it
@@ -11,6 +12,12 @@
 // It writes
 //   <folder>/index.json             every rule set, its description and the versions mirrored
 //   <folder>/<id>/<version>.json    the documents in that package, its own first
+//
+// With --gallery it copies the Gallery (Rulpane.Gallery) instead, for a view, a theme or a
+// paneset named as <owner>/<name>@<version>. <gallery> is a checkout of it, the clone beside
+// this one by default; a withheld release is left out here too. It writes
+//   <folder>/index.json                       every name, what it is, and the versions mirrored
+//   <folder>/<owner>/<name>/<version>.json    one release: the document, and where it was read from
 
 using System.IO.Compression;
 using System.Text.Json;
@@ -19,10 +26,16 @@ using Rulealize;
 
 const string FlatContainer = "https://api.nuget.org/v3-flatcontainer";
 
+if (args is ["--gallery", .. var rest])
+{
+    return rest.Length is 1 or 2
+        ? await Gallery.MirrorAsync(rest[0], rest.Length > 1 ? rest[1] : "../Rulpane.Gallery")
+        : Usage();
+}
+
 if (args.Length is < 1 or > 2)
 {
-    Console.Error.WriteLine("usage: Rulpane.Mirror <folder> [<registry>]");
-    return 2;
+    return Usage();
 }
 
 string output = args[0];
@@ -85,6 +98,13 @@ await File.WriteAllTextAsync(
 
 Console.Error.WriteLine($"{entries.Count} rule set(s) → {output}");
 return 0;
+
+static int Usage()
+{
+    Console.Error.WriteLine("usage: Rulpane.Mirror <folder> [<registry>]");
+    Console.Error.WriteLine("       Rulpane.Mirror --gallery <folder> [<gallery>]");
+    return 2;
+}
 
 async Task<JsonNode> GetJson(string url) =>
     JsonNode.Parse(await http.GetStringAsync(url))

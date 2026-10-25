@@ -1,0 +1,8 @@
+{
+  "$schema": "rulpane/paneset/v1",
+  // Rulealize.RuleSet.Request projects its stage by the very name the stages view reads, so
+  // nothing is bound. It opens with nothing to request, so this starts from its example.
+  "r": "request",
+  "v": "stages",
+  "s": { "subjects": ["mon-am", "mon-pm", "tue-am"], "stage": "draft", "subject": null }
+}

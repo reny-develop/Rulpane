@@ -27,6 +27,10 @@
                 <dd>@Say("The theme: colours, corners and type. Left out, it looks like Rulpane", "テーマ。色、角、書体。省略すると Rulpane の見た目です")</dd>
                 <dt><span class="chip ok">s</span></dt>
                 <dd>@Say("The position. Left out, the rules start from the beginning", "いまの状態。省略すると、ルールの最初から始まります")</dd>
+                <dt><span class="chip">p</span></dt>
+                <dd>@Say("A paneset: r, v, t and s as one document, bundled or from the Gallery. Any of them the link also gives goes over its own", "ペインセット。r・v・t・s を 1 つの文書にまとめたもので、同梱のものか Gallery のもの。リンクに同じキーがあれば、そちらが優先されます")</dd>
+                <dt><span class="chip">b</span></dt>
+                <dd>@Say("Where the rules keep what the view reads, when they call it something else", "ビューが読む名前を、ルールが別の名前で持っているときに、どこにあるかを指定します")</dd>
             </dl>
             <p class="note"><Icon Name="back" Size="14" />@Say("Every move rewrites the link, so Back is an undo.", "操作するたびにリンクが書き換わるので、ブラウザの「戻る」がそのまま取り消しになります。")</p>
         </div>
@@ -58,18 +62,18 @@
 
     <section class="section">
         <div class="section-head">
-            <h2>@Say("Templates", "テンプレート")</h2>
-            <p>@Say("A view written for no one rule set: it says what it expects, and any rules that have it can use it, under their own names.", "どのルールセット向けでもないビューです。何を期待するかを自分で宣言し、それを持つルールなら、ルール自身の名前のままで使えます。")</p>
+            <h2>@Say("Panesets", "ペインセット")</h2>
+            <p>@Say("Rules, a view, a theme and where to start, as one document a link names. A view that says what it expects is used with any rules that have it, and b binds what they keep under other names.", "ルール、ビュー、テーマ、開始状態を、リンクが名前で指せる 1 つの文書にまとめたものです。何を読むかを宣言したビューは、それを持つどのルールにも使えます。ルールが別の名前で持っているものは b で結び付けます。")</p>
         </div>
         <ul class="samples">
-            @foreach (Sample sample in Templated)
+            @foreach (Sample sample in Panesets)
             {
                 <li>
-                    <a class="card sample" href="@(BaseUri + Fragment.Build(("r", sample.Name), ("v", sample.View), ("s", sample.Data is null ? null : Fragment.Pack(sample.Data))))">
-                        <span class="sample-head">@sample.Name + @sample.Tags[0]<Icon Name="arrow" /></span>
+                    <a class="card sample" href="@(BaseUri + Fragment.Build(("p", sample.Name)))">
+                        <span class="sample-head">@sample.Name<Icon Name="arrow" /></span>
                         <p>@sample.Description</p>
                         <span class="tags">
-                            @foreach (string tag in sample.Tags.Skip(1))
+                            @foreach (string tag in sample.Tags)
                             {
                                 <span class="chip">@tag</span>
                             }
@@ -156,7 +160,7 @@
 </div>
 
 @code {
-    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null, string? Data = null);
+    private sealed record Sample(string Name, string Description, string[] Tags, string? View = null, string? Theme = null);
 
     // Each describes the document of the same name in wwwroot/rulesets, its view the one in wwwroot/views, and its theme the one in wwwroot/themes.
     private static readonly Sample[] Samples =
@@ -175,20 +179,17 @@
         new("roster", Say("The roster, rounder and closer together, in green.", "シフト表を、丸く、詰めて、緑で。"), ["theme", "compact"], View: "roster", Theme: "meadow"),
     ];
 
-    // A template's name comes first among the tags. The official rule sets open with nothing in
-    // them, since what is requested, signed or ticked off is the state's to say, so these start
-    // from the example in each one's repository.
-    private static readonly Sample[] Templated =
+    // Each is the paneset of the same name in wwwroot/panesets. The official rule sets open with
+    // nothing in them, since what is requested, signed or ticked off is the state's to say, so
+    // their panesets start from the example in each one's repository.
+    private static readonly Sample[] Panesets =
     [
-        new("request", Say("Rulealize.RuleSet.Request, which projects its stage under that very name.", "Rulealize.RuleSet.Request。段階をテンプレートと同じ名前で projection しています。"), ["stages", Say("official", "公式"), Say("as it is", "そのまま")], View: "stages",
-            Data: """{"subjects":["mon-am","mon-pm","tue-am"],"stage":"draft","subject":null}"""),
-        new("approval", Say("The same template on the approval rules, which keep the stage in summary.", "同じテンプレートを approval のルールに。こちらは段階を summary に持っています。"), ["stages", "bind"], View: "approval-stages"),
-        new("checklist", Say("Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", "Rulealize.RuleSet.Checklist。手順を好きな順に済ませます。リストは state のフィールドです。"), ["progress", Say("official", "公式"), "bind $"], View: "checklist-progress",
-            Data: """{"steps":["contract","equipment","induction","payroll"],"done":["contract"]}"""),
-        new("signatures", Say("Rulealize.RuleSet.Signatures: the same template, counting who has signed.", "Rulealize.RuleSet.Signatures。同じテンプレートで、署名した人を数えます。"), ["progress", Say("official", "公式"), "bind"], View: "signatures-progress",
-            Data: """{"signatories":["ann","bo","cy"],"required":2,"signed":[],"outcome":"open"}"""),
-        new("tictactoe", Say("A board game that projects its turn by the name the template expects; the board is bound to its state field.", "テンプレートが期待する名前で手番を projection している盤のゲーム。盤は state のフィールドに結び付けています。"), ["grid-game", "bind $"], View: "tictactoe-grid-game"),
-        new("reversi", Say("The same template on reversi, whose board and turn are state fields. Passing is under the board.", "同じテンプレートを reversi に。盤も手番も state のフィールドです。パスは盤の下にあります。"), ["grid-game", "bind $"], View: "reversi-grid-game"),
+        new("request-stages", Say("Rulealize.RuleSet.Request with the stages view, which reads its stage by the very name it projects.", "Rulealize.RuleSet.Request にビュー stages。段階を、ルールが projection しているのと同じ名前で読みます。"), ["stages", Say("official", "公式"), "s"]),
+        new("approval-stages", Say("The same view on the approval rules, which keep the stage in summary.", "同じビューを approval のルールに。こちらは段階を summary に持っています。"), ["stages", "b"]),
+        new("checklist-progress", Say("Rulealize.RuleSet.Checklist: steps done in any order. Its lists are state fields.", "Rulealize.RuleSet.Checklist。手順を好きな順に済ませます。リストは state のフィールドです。"), ["progress", Say("official", "公式"), "b $"]),
+        new("signatures-progress", Say("Rulealize.RuleSet.Signatures: the same view, counting who has signed.", "Rulealize.RuleSet.Signatures。同じビューで、署名した人を数えます。"), ["progress", Say("official", "公式"), "b"]),
+        new("tictactoe-grid-game", Say("A board game that projects its turn by the name the view reads; the board is bound to its state field.", "ビューが読む名前で手番を projection している盤のゲーム。盤は state のフィールドに結び付けています。"), ["grid-game", "b $"]),
+        new("reversi-grid-game", Say("The same view on reversi, whose board and turn are state fields. Passing is under the board.", "同じビューを reversi に。盤も手番も state のフィールドです。パスは盤の下にあります。"), ["grid-game", "b $"]),
     ];
 
     // A registered rule set at its newest version, or why Rulpane cannot run it.
@@ -270,8 +271,7 @@
             string? view = null;
             if (!string.IsNullOrWhiteSpace(viewDocument))
             {
-                string? template = View.TemplateOf(viewDocument) is string name ? await Source.View(name).ReadAsync(Http) : null;
-                View.Parse(viewDocument, context, document, template);
+                View.Parse(viewDocument, context, document);
                 view = Fragment.Pack(Minify(viewDocument));
             }
 

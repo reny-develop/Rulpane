@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Rulealize;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// A view document, <c>rulealize/view/v1</c>: which values go where on the screen and how
@@ -10,11 +10,11 @@ namespace Rulpane.Viewer.Engine;
 /// rules state, which the view only reads — so a screen never gives a second account of the rules.
 /// </summary>
 /// <remarks>
-/// A view comes in three forms. One for a rule set has a <c>layout</c> and binds what those
-/// rules have. A template has a <c>layout</c> and <c>expects</c>: the projections and inputs it
-/// needs, and nothing else of any rules, so it is written once for every rule set that has them.
-/// A view that applies a template names it in <c>template</c> and says, in <c>bind</c>, where
-/// these rules keep each projection it expects under another name.
+/// Every view reads names: the projections and state fields it binds, and the inputs it offers.
+/// One may say in <c>expects</c> which projections and inputs it reads, with a type for each;
+/// such a view reads nothing else, names no rule set, and has its values checked against those
+/// types at every position. Rules that keep what a view reads under other names are matched to
+/// it by the paneset's <c>b</c>, which this is handed as a map, never by the view itself.
 /// </remarks>
 public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Names, IReadOnlyList<Expected> Expected)
 {
@@ -26,61 +26,47 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
         AllowTrailingCommas = true,
     };
 
-    /// <summary>The bundled template a view applies, which has to be read before it can be parsed; null for any other view.</summary>
-    public static string? TemplateOf(string json)
-    {
-        JsonObject root = JsonNode.Parse(json, documentOptions: Lenient) as JsonObject
-            ?? throw new FormatException("A view is a JSON object.");
-        return Reader.OptionalString(root, "", "template") is string name
-            ? Source.View(name) is { IsBundled: true } ? name : throw new FormatException("template: a template is named by one bundled with Rulpane.")
-            : null;
-    }
-
     /// <summary>
     /// Reads a view and checks it against the rules it will show: every binding names a
     /// projection or a state field they have, and every input it lists is one they offer.
     /// <paramref name="rules"/> is the rule set's document, which <paramref name="context"/>
     /// was compiled from: a board's size is in its state schema, and nowhere else.
-    /// <paramref name="template"/> is the document of the template the view names in
-    /// <c>template</c>, as <see cref="TemplateOf"/> gives it.
+    /// <paramref name="bind"/> is the paneset's <c>b</c>: for a name the view reads, where these
+    /// rules keep it — a projection, a path into one, or a state field. Each must be one the view reads.
     /// </summary>
-    public static View Parse(string json, RuleContext context, string rules, string? template = null)
+    public static View Parse(string json, RuleContext context, string rules, IReadOnlyDictionary<string, string>? bind = null)
     {
         JsonObject root = JsonNode.Parse(json, documentOptions: Lenient) as JsonObject
             ?? throw new FormatException("A view is a JSON object.");
 
-        var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient));
-        if (root.ContainsKey("template"))
-        {
-            Reader.Keys(root, "", "$schema", "ruleSet", "template", "bind", "title", "names");
-            Header(root, reader);
-            JsonObject templateRoot = JsonNode.Parse(template ?? throw new ArgumentNullException(nameof(template)), documentOptions: Lenient) as JsonObject
-                ?? throw new FormatException("template: a template is a JSON object.");
-            if (!templateRoot.ContainsKey("expects"))
-            {
-                throw new FormatException($"template: \"{Reader.String(root, "", "template")}\" is not a template: it expects nothing.");
-            }
-
-            View applied = Template(templateRoot, reader, root["bind"]);
-            return applied with
-            {
-                Title = Reader.OptionalString(root, "", "title") ?? applied.Title,
-                Names = root["names"] is JsonNode own ? applied.Names.Over(reader.ReadNames(own)) : applied.Names,
-            };
-        }
-
+        var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient), bind ?? new Dictionary<string, string>());
+        View view;
         if (root.ContainsKey("expects"))
         {
-            return Template(root, reader, null);
+            // What it reads is all in expects, so it names no rule set and reads no state; its
+            // names are for whatever rules it is used with, and are checked against none of them.
+            Reader.Keys(root, "", "$schema", "title", "expects", "layout", "names");
+            Header(root, reader);
+            reader.Expect(root["expects"]);
+            view = new View(
+                Reader.OptionalString(root, "", "title"),
+                ReadLayout(root, reader),
+                root["names"] is JsonNode names ? Reader.ReadUncheckedNames(names) : Names.None,
+                reader.Expected);
+        }
+        else
+        {
+            Reader.Keys(root, "", "$schema", "ruleSet", "title", "layout", "names");
+            Header(root, reader);
+            view = new View(
+                Reader.OptionalString(root, "", "title"),
+                ReadLayout(root, reader),
+                root["names"] is JsonNode names ? reader.ReadNames(names) : Names.None,
+                []);
         }
 
-        Reader.Keys(root, "", "$schema", "ruleSet", "title", "layout", "names");
-        Header(root, reader);
-        return new View(
-            Reader.OptionalString(root, "", "title"),
-            ReadLayout(root, reader),
-            root["names"] is JsonNode names ? reader.ReadNames(names) : Names.None,
-            []);
+        reader.AllBound();
+        return view;
     }
 
     private static void Header(JsonObject root, Reader reader)
@@ -107,23 +93,9 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
         return layout.Select((b, i) => reader.Block(b, $"layout[{i}]")).ToList();
     }
 
-    // A template knows no rules, so it names no rule set and reads no state; its names are for
-    // whatever rules it is applied to, and are checked against none of them.
-    private static View Template(JsonObject root, Reader reader, JsonNode? bind)
-    {
-        Reader.Keys(root, "", "$schema", "title", "expects", "layout", "names");
-        Header(root, reader);
-        reader.Expect(root["expects"], bind);
-        return new View(
-            Reader.OptionalString(root, "", "title"),
-            ReadLayout(root, reader),
-            root["names"] is JsonNode names ? Reader.ReadTemplateNames(names) : Names.None,
-            reader.Expected);
-    }
-
     /// <summary>
-    /// Throws when a value the rules give at this position is not the kind the template said it
-    /// expects: a template that bound a list and was handed a number would show nonsense instead.
+    /// Throws when a value the rules give at this position is not the kind the view said it
+    /// expects: a view that bound a list and was handed a number would show nonsense instead.
     /// </summary>
     public void Check(Func<string, JsonNode?> projection, JsonNode? data)
     {
@@ -133,32 +105,54 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             if (!expected.Type.Matches(value))
             {
                 string shown = value?.ToJsonString() ?? "null";
-                throw new FormatException($"expects.projections.{expected.Name}: the template expects {expected.Type}, and the rules give {(shown.Length > 80 ? shown[..80] + "…" : shown)} (at {expected.Bind}).");
+                throw new FormatException($"expects.projections.{expected.Name}: the view expects {expected.Type}, and the rules give {(shown.Length > 80 ? shown[..80] + "…" : shown)} (at {expected.Bind}).");
             }
         }
     }
 
     /// <summary>Takes the view apart and puts each piece through the checks <see cref="Parse"/> promises.</summary>
-    private sealed class Reader(RuleContext context, JsonNode? rules)
+    private sealed class Reader(RuleContext context, JsonNode? rules, IReadOnlyDictionary<string, string> bind)
     {
         private readonly HashSet<string> projections = [.. context.Projections];
         private readonly HashSet<string> inputs = [.. context.Inputs];
         private readonly JsonObject state = JsonNode.Parse(context.InitialState)?["data"] as JsonObject ?? [];
 
-        // Set while a template is read: what it expects, and where these rules keep each of those.
+        // Set while a view with expects is read: what it expects, and where these rules keep each of those.
         private Dictionary<string, Expectation>? expectedProjections;
         private Dictionary<string, List<string>>? expectedInputs;
         private readonly Dictionary<string, Binding> map = new(StringComparer.Ordinal);
+
+        // The paneset's b, each held to the rules, and which of them the view has read.
+        private Dictionary<string, Binding>? given;
+        private readonly HashSet<string> used = new(StringComparer.Ordinal);
+
+        private Dictionary<string, Binding> Given => given ??= bind.ToDictionary(
+            b => b.Key,
+            b => b.Key.Length == 0 || b.Key.Contains('.') || b.Key.StartsWith('$')
+                ? throw new FormatException($"b.{b.Key}: what is bound is a name the view reads, such as \"stage\".")
+                : RuleBinding(b.Value, $"b.{b.Key}"),
+            StringComparer.Ordinal);
+
+        /// <summary>Throws for a name in <c>b</c> the view never read: it would bind nothing, and was most likely misspelt.</summary>
+        public void AllBound()
+        {
+            foreach (string name in Given.Keys.Where(n => !used.Contains(n)))
+            {
+                throw new FormatException(expectedProjections is null
+                    ? $"b.{name}: the view reads no \"{name}\"."
+                    : $"b.{name}: the view expects no \"{name}\". It expects {(expectedProjections.Count == 0 ? "no projections" : string.Join(", ", expectedProjections.Keys))}.");
+            }
+        }
 
         public List<Expected> Expected { get; } = [];
 
         /// <summary>
         /// Reads <c>expects</c> and holds it against the rules: each projection is one they have,
-        /// or one <paramref name="bind"/> finds for it elsewhere, and each input is one of theirs.
+        /// or one the paneset's <c>b</c> finds for it elsewhere, and each input is one of theirs.
         /// </summary>
-        public void Expect(JsonNode? node, JsonNode? bind)
+        public void Expect(JsonNode? node)
         {
-            JsonObject expects = node as JsonObject ?? throw new FormatException("expects: an object of the projections and inputs the template needs.");
+            JsonObject expects = node as JsonObject ?? throw new FormatException("expects: an object of the projections and inputs the view reads.");
             Keys(expects, "expects", "projections", "inputs");
 
             JsonObject wanted = expects["projections"] as JsonObject ?? (expects.ContainsKey("projections")
@@ -169,29 +163,30 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                 $"expects.projections.{p.Key}"), StringComparer.Ordinal);
 
             JsonObject moves = expects["inputs"] as JsonObject ?? (expects.ContainsKey("inputs")
-                ? throw new FormatException("expects.inputs: a map of inputs, each to the parameters the template uses.")
+                ? throw new FormatException("expects.inputs: a map of inputs, each to the parameters the view uses.")
                 : []);
             expectedInputs = moves.ToDictionary(i => i.Key, i => Each(moves, "expects.inputs", i.Key, (n, a) =>
                 n is JsonValue v && v.TryGetValue(out string? name) ? name : throw new FormatException($"{a}: a parameter is named by a string.")), StringComparer.Ordinal);
 
-            Bind(bind);
-
             foreach (var (name, type) in expectedProjections)
             {
-                if (!map.TryGetValue(name, out Binding? found))
+                if (Given.TryGetValue(name, out Binding? found))
                 {
-                    if (!projections.Contains(name))
-                    {
-                        throw new FormatException($"expects.projections.{name}: the rules project no \"{name}\". {(projections.Count == 0 ? "They project nothing" : $"They project {string.Join(", ", projections)}")}; a view that applies the template can bind it to what they have.");
-                    }
-
+                    used.Add(name);
+                }
+                else if (projections.Contains(name))
+                {
                     found = new Binding(false, name, []);
-                    map[name] = found;
+                }
+                else
+                {
+                    throw new FormatException($"expects.projections.{name}: the rules project no \"{name}\". {(projections.Count == 0 ? "They project nothing" : $"They project {string.Join(", ", projections)}")}; the paneset's b can bind it to what they have.");
                 }
 
+                map[name] = found;
                 if (type.Kind == Kind.Board && BoardShapeOf(found) is null)
                 {
-                    throw new FormatException($"expects.projections.{name}: a board is a state field the rules declare with grid.board, which no projection can be; a view that applies the template binds it to one, such as \"$board\".");
+                    throw new FormatException($"expects.projections.{name}: a board is a state field the rules declare with grid.board, which no projection can be; the paneset's b binds it to one, such as \"$board\".");
                 }
 
                 Expected.Add(new Expected(name, found, type));
@@ -208,33 +203,6 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                 {
                     CheckParameter(input, parameter, $"expects.inputs.{input}");
                 }
-            }
-        }
-
-        // Where these rules keep a projection the template expects: any binding of theirs, $ included.
-        private void Bind(JsonNode? node)
-        {
-            if (node is null)
-            {
-                return;
-            }
-
-            JsonObject bind = node as JsonObject ?? throw new FormatException("bind: an object of projections.");
-            Keys(bind, "bind", "projections");
-            if (bind["projections"] is not JsonNode given)
-            {
-                return;
-            }
-
-            JsonObject wanted = given as JsonObject ?? throw new FormatException("bind.projections: a map of the projections the template expects, each to a binding of these rules.");
-            foreach (string name in wanted.Select(p => p.Key))
-            {
-                if (!expectedProjections!.ContainsKey(name))
-                {
-                    throw new FormatException($"bind.projections.{name}: the template expects no \"{name}\". It expects {(expectedProjections.Count == 0 ? "no projections" : string.Join(", ", expectedProjections.Keys))}.");
-                }
-
-                map[name] = RuleBinding(wanted, "bind.projections", name)!;
             }
         }
 
@@ -276,7 +244,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             return new Names(given, parameters, Map(names, "codes"), Map(names, "values"));
         }
 
-        public static Names ReadTemplateNames(JsonNode node)
+        public static Names ReadUncheckedNames(JsonNode node)
         {
             JsonObject names = node as JsonObject ?? throw new FormatException("names: names is an object of inputs, params, codes and values.");
             Keys(names, "names", "inputs", "params", "codes", "values");
@@ -402,19 +370,19 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             Input(parts[0], at);
             if (expectedInputs is not null && !expectedInputs[parts[0]].Contains(parts[1]))
             {
-                throw new FormatException($"{at}: the template expects no parameter \"{parts[1]}\" of \"{parts[0]}\". Add it to expects.inputs.{parts[0]}.");
+                throw new FormatException($"{at}: the view expects no parameter \"{parts[1]}\" of \"{parts[0]}\". Add it to expects.inputs.{parts[0]}.");
             }
 
             CheckParameter(parts[0], parts[1], at);
             return new SquareMove(parts[0], parts[1]);
         }
 
-        // An input a template names is one it expects, and every input named is one the rules have.
+        // An input a view with expects names is one it expects, and every input named is one the rules have.
         private void Input(string name, string at)
         {
             if (expectedInputs is not null && !expectedInputs.ContainsKey(name))
             {
-                throw new FormatException($"{at}: the template expects no input \"{name}\". {(expectedInputs.Count == 0 ? "It expects none" : $"It expects {string.Join(", ", expectedInputs.Keys)}")}; name it in expects.inputs.");
+                throw new FormatException($"{at}: the view expects no input \"{name}\". {(expectedInputs.Count == 0 ? "It expects none" : $"It expects {string.Join(", ", expectedInputs.Keys)}")}; name it in expects.inputs.");
             }
 
             if (!inputs.Contains(name))
@@ -473,8 +441,8 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             OptionalBinding(parent, at, key, wants) ?? throw new FormatException($"{at}.{key}: missing.");
 
         /// <summary>
-        /// A binding of the view, as the rules will be read through it. In a template it names a
-        /// projection the template expects, of a kind <paramref name="wants"/> allows when it lists
+        /// A binding of the view, as the rules will be read through it. In a view with expects it names a
+        /// projection it expects, of a kind <paramref name="wants"/> allows when it lists
         /// any, and is then read wherever these rules keep that projection.
         /// </summary>
         private Binding? OptionalBinding(JsonObject parent, string at, string key, params Kind[] wants)
@@ -493,42 +461,58 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
         {
             if (binding.FromState)
             {
-                throw new FormatException($"{at}: a template reads no state, only the projections it expects. Expect one for \"{binding.Root}\" instead.");
+                throw new FormatException($"{at}: a view with expects reads no state, only the projections it expects. Expect one for \"{binding.Root}\" instead.");
             }
 
             if (!expectedProjections!.TryGetValue(binding.Root, out Expectation? type))
             {
-                throw new FormatException($"{at}: the template expects no \"{binding.Root}\". {(expectedProjections.Count == 0 ? "It expects no projections" : $"It expects {string.Join(", ", expectedProjections.Keys)}")}; add it to expects.projections.");
+                throw new FormatException($"{at}: the view expects no \"{binding.Root}\". {(expectedProjections.Count == 0 ? "It expects no projections" : $"It expects {string.Join(", ", expectedProjections.Keys)}")}; add it to expects.projections.");
             }
 
             foreach (string step in binding.Path)
             {
                 type = type.Step(step)
-                    ?? throw new FormatException($"{at}: \"{binding}\" steps to \"{step}\", and the template expects {binding.Root} to be {expectedProjections[binding.Root]}.");
+                    ?? throw new FormatException($"{at}: \"{binding}\" steps to \"{step}\", and the view expects {binding.Root} to be {expectedProjections[binding.Root]}.");
             }
 
             // A board's size is in the rules' schema, so "any" is not enough for one; for anything else it is.
             bool fits = wants.Length == 0 || wants.Contains(type.Kind) || type.Kind == Kind.Any && !wants.Contains(Kind.Board);
             if (!fits)
             {
-                throw new FormatException($"{at}: \"{binding}\" is {type} in what the template expects, and this needs {string.Join(" or ", wants.Select(w => w.ToString().ToLowerInvariant()))}.");
+                throw new FormatException($"{at}: \"{binding}\" is {type} in what the view expects, and this needs {string.Join(" or ", wants.Select(w => w.ToString().ToLowerInvariant()))}.");
             }
 
             Binding found = map[binding.Root];
             return found with { Path = [.. found.Path, .. binding.Path] };
         }
 
-        // A binding of these rules themselves: its first name is a projection or a state field they have.
+        // A binding of the view's own, in a view without expects: a name the paneset's b binds is
+        // read where b says, and any other is the rules' own projection or state field.
         private Binding RuleBinding(JsonObject parent, string at, string key)
         {
             string text = OptionalString(parent, at, key) ?? throw new FormatException($"{Join(at, key)}: missing.");
-            Binding binding = Binding.Parse(text, $"{Join(at, key)}");
+            Binding binding = Binding.Parse(text, Join(at, key));
+            if (!binding.FromState && Given.TryGetValue(binding.Root, out Binding? bound))
+            {
+                used.Add(binding.Root);
+                return bound with { Path = [.. bound.Path, .. binding.Path] };
+            }
+
+            return Known(binding, Join(at, key));
+        }
+
+        // A binding of these rules, as b gives one.
+        private Binding RuleBinding(string text, string at) => Known(Binding.Parse(text, at), at);
+
+        // Its first name is a projection or a state field these rules have.
+        private Binding Known(Binding binding, string at)
+        {
             bool known = binding.FromState ? state.ContainsKey(binding.Root) : projections.Contains(binding.Root);
             if (!known)
             {
                 throw new FormatException(binding.FromState
-                    ? $"{at}.{key}: the state has no field \"{binding.Root}\"."
-                    : $"{at}.{key}: the rules project no \"{binding.Root}\". {(projections.Count == 0 ? "They project nothing; bind to the state with $." : $"They project {string.Join(", ", projections)}.")}");
+                    ? $"{at}: the state has no field \"{binding.Root}\"."
+                    : $"{at}: the rules project no \"{binding.Root}\". {(projections.Count == 0 ? "They project nothing; bind to the state with $." : $"They project {string.Join(", ", projections)}.")}");
             }
 
             return binding;
@@ -565,7 +549,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
     }
 }
 
-/// <summary>A projection a template expects, where these rules keep it, and the type it was promised to have.</summary>
+/// <summary>A projection a view expects, where these rules keep it, and the type it was promised to have.</summary>
 public sealed record Expected(string Name, Binding Bind, Expectation Type);
 
 /// <summary>How a value is marked: the chip colours of the design.</summary>

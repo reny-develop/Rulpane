@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Rulpane.Engine/Rulpane.Engine.csproj" />
     <Project Path="src/Rulpane.Viewer/Rulpane.Viewer.csproj" />
   </Folder>
   <Folder Name="/tool/">

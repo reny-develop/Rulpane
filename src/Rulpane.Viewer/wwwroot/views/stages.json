@@ -1,7 +1,7 @@
 {
   "$schema": "rulealize/view/v1",
-  // A template: written for no one rule set, but for any that projects where its case stands.
-  // It names no ruleSet and reads no state; what it needs is in `expects`, and nothing else.
+  // Written for no one rule set, but for any that projects where its case stands.
+  // It names no ruleSet and reads no state; what it reads is in `expects`, and nothing else.
   "expects": {
     "projections": { "stage": "string" }
   },

@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Rulpane.Viewer.Engine;
+namespace Rulpane.Engine;
 
 /// <summary>
 /// The size and coordinate notation of a Grid board. A board's state holds only the squares

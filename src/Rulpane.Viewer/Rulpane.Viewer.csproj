@@ -10,24 +10,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
-    <PackageReference Include="Rulealize" Version="0.14.0" />
-    <PackageReference Include="Rulealize.Plugin.Arithmetic" Version="1.1.0" />
-    <PackageReference Include="Rulealize.Plugin.Binding" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Branch" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Chance" Version="1.1.0" />
-    <PackageReference Include="Rulealize.Plugin.Comparison" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Deck" Version="1.0.0" />
-    <PackageReference Include="Rulealize.Plugin.Definition" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Graph" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Grid" Version="1.2.0" />
-    <PackageReference Include="Rulealize.Plugin.Logic" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Record" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Secret" Version="1.0.0" />
-    <PackageReference Include="Rulealize.Plugin.Sequence" Version="1.4.0" />
-    <PackageReference Include="Rulealize.Plugin.State" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.Text" Version="1.0.0" />
-    <PackageReference Include="Rulealize.Plugin.Tuple" Version="1.0.1" />
-    <PackageReference Include="Rulealize.Plugin.TypeSchema" Version="1.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Rulpane.Engine\Rulpane.Engine.csproj" />
   </ItemGroup>
 
 </Project>
