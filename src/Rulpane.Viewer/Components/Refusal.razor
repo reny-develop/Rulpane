@@ -1,0 +1,18 @@
+@* One thing the rules refused with: the view's sentence for its code, or the code as the rules wrote it. *@
+
+@if (Names.Code(Code) is string said)
+{
+    <span>@said</span>
+}
+else
+{
+    <code>@Code</code>@Suffix
+}
+
+@code {
+    [Parameter, EditorRequired] public string Code { get; set; } = default!;
+    [Parameter] public Names Names { get; set; } = Names.None;
+
+    /// <summary>Said after a bare code, which on its own does not say it was a refusal.</summary>
+    [Parameter] public string? Suffix { get; set; }
+}

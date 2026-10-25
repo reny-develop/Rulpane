@@ -15,5 +15,14 @@
     },
     { "c": "actions", "title": "Submit", "inputs": ["submit"] },
     { "c": "actions", "title": "Review", "inputs": ["approve", "reject"] }
-  ]
+  ],
+  // What the screen calls the rules' names. The tones above still key on the values the rules hold.
+  "names": {
+    "inputs": { "submit": "Submit the claim", "approve": "Approve", "reject": "Send back" },
+    "params": { "reason": "Why" },
+    "values": {
+      "draft": "Draft", "review": "In review", "approved": "Approved", "rejected": "Sent back",
+      "scope": "Out of scope", "cost": "Costs too much", "timing": "Bad timing"
+    }
+  }
 }

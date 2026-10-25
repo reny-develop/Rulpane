@@ -26,15 +26,15 @@
                 string? text = Value is JsonObject squares && squares[coord] is JsonNode cell ? Text(cell) : null;
                 if (MoveOn(coord) is ValidInput move)
                 {
-                    <button class="square playable" title="@move" aria-label="@($"{Board.Play!.Input} {coord}")"
+                    <button class="square playable" title="@Names.Describe(move)" aria-label="@($"{Names.Input(Board.Play!.Input)} {coord}")"
                             @onclick="() => OnPlay.InvokeAsync((move, null))">
-                        <Square Text="@text" Pieces="Board.Pieces" />
+                        <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
                     </button>
                 }
                 else
                 {
-                    <span class="square" aria-label="@($"{coord}: {text ?? "empty"}")">
-                        <Square Text="@text" Pieces="Board.Pieces" />
+                    <span class="square" aria-label="@($"{coord}: {(text is null ? "empty" : Names.Value(text))}")">
+                        <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
                     </span>
                 }
             }
@@ -42,7 +42,12 @@
     </div>
     @if (Rejection is not null && Refused?.Input == Board.Play?.Input)
     {
-        <p class="rejection board-rejection"><Icon Name="alert" Size="14" /><code>@Rejection</code></p>
+        <p class="rejection board-rejection"><Icon Name="alert" Size="14" />
+            @foreach (var (refusal, i) in Rejection.Select((r, i) => (r, i)))
+            {
+                @(i > 0 ? " / " : null)<Refusal Code="@refusal" Names="Names" />
+            }
+        </p>
     }
 </section>
 
@@ -57,7 +62,8 @@
 
     [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?>? Open)> OnPlay { get; set; }
     [Parameter] public ValidInput? Refused { get; set; }
-    [Parameter] public string? Rejection { get; set; }
+    [Parameter] public IReadOnlyList<string>? Rejection { get; set; }
+    [Parameter] public Names Names { get; set; } = Names.None;
 
     private BoardShape Shape => Board.Shape;
 

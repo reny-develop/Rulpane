@@ -12,14 +12,14 @@
             {
                 <div>
                     <dt>@key</dt>
-                    <dd><ValueView Value="item" /></dd>
+                    <dd><ValueView Value="item" Names="Names" /></dd>
                 </div>
             }
         </dl>
     }
     else
     {
-        <div class="rows single"><div><ValueView Value="Value" /></div></div>
+        <div class="rows single"><div><ValueView Value="Value" Names="Names" /></div></div>
     }
 }
 else
@@ -37,7 +37,7 @@ else
                 @foreach (var (key, item) in record)
                 {
                     <dt>@key</dt>
-                    <dd><ValueView Value="item" /></dd>
+                    <dd><ValueView Value="item" Names="Names" /></dd>
                 }
             </dl>
             break;
@@ -56,7 +56,7 @@ else
             <ol class="sequence @(sequence.Any(i => i is JsonObject) ? "of-records" : null)">
                 @foreach (var item in sequence)
                 {
-                    <li><ValueView Value="item" /></li>
+                    <li><ValueView Value="item" Names="Names" /></li>
                 }
             </ol>
             break;
@@ -67,7 +67,7 @@ else
             <span class="chip dot mono">false</span>
             break;
         case JsonValue scalar when scalar.GetValueKind() == JsonValueKind.String:
-            <span class="text">@(scalar.GetValue<string>())</span>
+            <span class="text">@Names.Value(scalar.GetValue<string>())</span>
             break;
         default:
             <span class="number">@Value.ToJsonString()</span>
@@ -81,12 +81,15 @@ else
     /// <summary>Whether this is the whole of what a card shows, rather than a part of it.</summary>
     [Parameter] public bool Top { get; set; }
 
+    /// <summary>What the view calls a string value; the screen without a view shows each as it is.</summary>
+    [Parameter] public Names Names { get; set; } = Names.None;
+
     private static bool IsScalar(JsonNode? node) => node is null or JsonValue;
 
-    private static string Scalar(JsonNode? node) => node switch
+    private string Scalar(JsonNode? node) => node switch
     {
         null => "null",
-        JsonValue v when v.GetValueKind() == JsonValueKind.String => v.GetValue<string>(),
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => Names.Value(v.GetValue<string>()),
         _ => node.ToJsonString(),
     };
 }

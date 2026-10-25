@@ -6,5 +6,10 @@
     // countdown projects nothing, so the view reads the state the way the rules do: $total.
     { "c": "stats", "items": [ { "label": "Total", "bind": "$total" } ] },
     { "c": "actions", "title": "Add", "inputs": "*" }
-  ]
+  ],
+  "names": {
+    "inputs": { "add": "Add" },
+    "params": { "n": "how many" },
+    "values": { "done": "Ten, exactly" }
+  }
 }

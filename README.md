@@ -68,6 +68,28 @@ A binding is a projection then `.`-separated steps into it (`summary.stage`), or
 
 Every block, and every row of `fields`, takes `showWhen`, a binding: it is shown only while that reads `true`. The game's end and its result are shown above the layout whatever the view says.
 
+### Names
+
+The labels a view writes are its own, but the rules' names reach the screen too: on the move buttons, in a form, in a refusal, in the values themselves. `names` says what to call them, in the one language the view is written in. Each kind has its own map, so an input and a value that share a spelling never collide:
+
+```jsonc
+"names": {
+  "inputs": { "approve": "Approve", "reject": "Send back" },   // move buttons and the last move
+  "params": { "reason": "Why" },                                // argument and form field names
+  "codes":  { "int.max": "That is more than a claim can be." }, // a refusal, in place of its code
+  "values": { "review": "In review", "scope": "Out of scope" }   // values wherever they are shown
+}
+```
+
+| Map | Checked when the link is opened |
+| --- | --- |
+| `inputs` | Each key is an input the rules have |
+| `params` | Each key is a parameter of one of the rules' inputs, when the rules write every input themselves |
+| `codes` | Not checked: codes come from plugins as well as from the rules |
+| `values` | Not checked: values come from the state. A value is looked up by the text the screen would show, so a number can be named too |
+
+A name the view leaves out is shown as the rules spell it. A `tone` and a board's `pieces` still key on the value the rules hold, not on its name. The screen without a view shows every name as it is.
+
 ## Themes
 
 A theme (`rulealize/theme/v1`) sets the colours, corners, typeface and spacing of everything under the top bar. The bar keeps Rulpane's own look whatever the theme says, so nothing a link brings can pass for it.

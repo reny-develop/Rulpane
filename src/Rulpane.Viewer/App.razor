@@ -91,7 +91,7 @@
                         <span class="move-text">@lastMove</span>
                         @if (lastDraws.Length > 0)
                         {
-                            <span class="drew"><Icon Name="dice" Size="14" />drew @string.Join(", ", lastDraws)</span>
+                            <span class="drew"><Icon Name="dice" Size="14" />drew @string.Join(", ", lastDraws.Select(Names.Rendered))</span>
                         }
                         <span class="undo"><Icon Name="back" Size="14" />Back to undo</span>
                     </p>
@@ -103,14 +103,14 @@
                         <div class="result-head"><Icon Name="flag" />The rules have ended</div>
                         <div class="result-value">
                             <span class="key">result</span>
-                            <span class="value">@(terminal.Result is null ? "—" : Display.Unquote(terminal.Result))</span>
+                            <span class="value">@(terminal.Result is null ? "—" : Names.Rendered(terminal.Result))</span>
                         </div>
                         <p>No moves are left. Share the link to hand over the finished position.</p>
                     </section>
                 }
                 else if (moves is not null && view is null)
                 {
-                    <MovePanel Moves="moves" Truncated="truncated" OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
+                    <MovePanel Moves="moves" Truncated="truncated" OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="rejection" />
                 }
             </div>
 
@@ -118,7 +118,7 @@
                 @if (view is not null)
                 {
                     <ViewLayout View="view" Projections="projections" Data="session.Data" Moves="moves" Truncated="truncated"
-                                OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="@rejection" />
+                                OnPlay="p => Play(p.Move, p.Open)" Refused="refused" Refusals="refusals" Rejection="rejection" />
                 }
                 else if (projections.Count > 0)
                 {
@@ -160,7 +160,8 @@
     private string[] lastDraws = [];
     private ValidInput? refused;
     private IReadOnlyDictionary<string, string[]>? refusals;
-    private string? rejection;
+    // Codes the rules refused with that belong to no one field, or what went wrong instead.
+    private IReadOnlyList<string>? rejection;
     private bool copied;
     private Source? source;
     private Source? viewSource;
@@ -174,6 +175,9 @@
     private Dictionary<string, JsonNode?> projections = [];
 
     private string BaseUri => Nav.BaseUri;
+
+    // What the view calls the rules' names; the screen without one uses them as they are.
+    private Names Names => view?.Names ?? Names.None;
 
     // The rule set's id: the identity without the version the sub-title already gives.
     private string Id => session!.Context.Id;
@@ -341,7 +345,7 @@
         try
         {
             Outcome outcome = session.Apply(move, open);
-            lastMove = Describe(move, open);
+            lastMove = Names.Describe(move, open);
             lastDraws = [.. outcome.Draws];
             next = FragmentFor(Session.PackData(outcome.Result.State));
         }
@@ -354,30 +358,17 @@
                 .GroupBy(r => r.Parameter!)
                 .ToDictionary(g => g.Key, g => g.Select(r => r.Code).ToArray());
             var rest = e.Rejections.Where(r => r.Parameter is null).Select(r => r.Code).Concat(e.Unexplained).ToList();
-            rejection = rest.Count > 0 ? string.Join(" / ", rest) : null;
+            rejection = rest.Count > 0 ? rest : null;
             return;
         }
         catch (Exception e)
         {
             ClearRejection();
-            rejection = e.Message;
+            rejection = [e.Message];
             return;
         }
 
         await GoAsync(next);
-    }
-
-    // A move with open parameters prints them as still to come; what was played had them typed in.
-    private static string Describe(ValidInput move, IReadOnlyDictionary<string, JsonNode?>? open)
-    {
-        if (open is null)
-        {
-            return move.ToString();
-        }
-
-        var arguments = move.Arguments.Select(a => $"{a.Key}: {Display.Unquote(a.Value)}")
-            .Concat(open.Select(o => $"{o.Key}: {(o.Value is null ? "null" : Display.Unquote(o.Value.ToJsonString()))}"));
-        return $"{move.Input}({string.Join(", ", arguments)})";
     }
 
     private void ClearRejection()

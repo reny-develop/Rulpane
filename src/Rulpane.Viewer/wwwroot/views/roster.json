@@ -13,5 +13,10 @@
     { "c": "table", "title": "Shifts", "bind": "$shifts",
       "columns": [ { "key": "id", "label": "Shift" }, { "key": "day", "label": "Day" }, { "key": "senior", "label": "Needs a senior" } ] },
     { "c": "table", "title": "Recently", "bind": "$log" }
-  ]
+  ],
+  "names": {
+    "inputs": { "assign": "Put on", "release": "Take off" },
+    "params": { "who": "who", "shift": "shift" },
+    "values": { "assign": "put on", "release": "took off", "complete": "Every shift covered", "stuck": "Nobody left fits" }
+  }
 }

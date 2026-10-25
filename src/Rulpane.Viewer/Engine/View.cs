@@ -9,7 +9,7 @@ namespace Rulpane.Viewer.Engine;
 /// they look. It holds bindings and nothing that computes — a condition is a projection the
 /// rules state, which the view only reads — so a screen never gives a second account of the rules.
 /// </summary>
-public sealed record View(string? Title, IReadOnlyList<Block> Layout)
+public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Names)
 {
     public const string Schema = "rulealize/view/v1";
 
@@ -31,7 +31,7 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
             ?? throw new FormatException("A view is a JSON object.");
 
         var reader = new Reader(context, JsonNode.Parse(rules, documentOptions: Lenient));
-        reader.Keys(root, "", "$schema", "ruleSet", "title", "layout");
+        reader.Keys(root, "", "$schema", "ruleSet", "title", "layout", "names");
         if (Reader.String(root, "", "$schema") != Schema)
         {
             throw new FormatException($"$schema: a view says \"{Schema}\".");
@@ -50,7 +50,8 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
 
         return new View(
             Reader.OptionalString(root, "", "title"),
-            layout.Select((b, i) => reader.Block(b, $"layout[{i}]")).ToList());
+            layout.Select((b, i) => reader.Block(b, $"layout[{i}]")).ToList(),
+            root["names"] is JsonNode names ? reader.ReadNames(names) : Names.None);
     }
 
     /// <summary>Takes the view apart and puts each piece through the checks <see cref="Parse"/> promises.</summary>
@@ -70,6 +71,44 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout)
             {
                 throw new FormatException($"ruleSet: the view is for {value}, and these rules are {context.RuleSet}.");
             }
+        }
+
+        // Inputs and parameters are the rules' own and are checked against them; the codes come
+        // from the plugins and the values from the state, so neither can be listed in advance.
+        public Names ReadNames(JsonNode node)
+        {
+            JsonObject names = node as JsonObject ?? throw new FormatException("names: names is an object of inputs, params, codes and values.");
+            Keys(names, "names", "inputs", "params", "codes", "values");
+            var given = Map(names, "inputs");
+            foreach (string input in given.Keys.Where(i => !inputs.Contains(i)))
+            {
+                throw new FormatException($"names.inputs.{input}: the rules have no input \"{input}\". They have {string.Join(", ", inputs)}.");
+            }
+
+            var parameters = Map(names, "params");
+            // A parameter can be checked only when every input is one the rules write themselves.
+            if (rules?["inputs"] is JsonObject written && inputs.All(written.ContainsKey))
+            {
+                var declared = written.SelectMany(i => i.Value?["params"] as JsonObject ?? []).Select(p => p.Key).ToHashSet();
+                foreach (string parameter in parameters.Keys.Where(p => !declared.Contains(p)))
+                {
+                    throw new FormatException($"names.params.{parameter}: no input of the rules has a parameter \"{parameter}\". They have {(declared.Count == 0 ? "none" : string.Join(", ", declared))}.");
+                }
+            }
+
+            return new Names(given, parameters, Map(names, "codes"), Map(names, "values"));
+        }
+
+        private static Dictionary<string, string> Map(JsonObject names, string key)
+        {
+            if (names[key] is not JsonNode node)
+            {
+                return [];
+            }
+
+            JsonObject map = node as JsonObject ?? throw new FormatException($"names.{key}: a map of names, each to what the screen calls it.");
+            return map.ToDictionary(p => p.Key, p => OptionalString(map, $"names.{key}", p.Key)
+                ?? throw new FormatException($"names.{key}.{p.Key}: a string is expected."));
         }
 
         public Block Block(JsonNode? node, string at)

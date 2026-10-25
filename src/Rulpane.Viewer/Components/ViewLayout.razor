@@ -29,12 +29,14 @@
                                 <dd>
                                     @if (row.Tones is not null && value is JsonValue)
                                     {
+                                        @* The tone is keyed by the value the rules hold; the chip says what the view calls it. *@
                                         string text = Display.Unquote(value.ToJsonString());
-                                        <span class="chip dot mono @ToneClass(row.Tones.GetValueOrDefault(text))">@text</span>
+                                        string shown = View.Names.Value(text);
+                                        <span class="chip dot @(shown == text ? "mono" : null) @ToneClass(row.Tones.GetValueOrDefault(text))">@shown</span>
                                     }
                                     else
                                     {
-                                        <ValueView Value="value" />
+                                        <ValueView Value="value" Names="View.Names" />
                                     }
                                 </dd>
                             </div>
@@ -78,7 +80,7 @@
                                         <tr>
                                             @foreach (Column column in columns)
                                             {
-                                                <td><ValueView Value="@(item is JsonObject record ? record[column.Key] : null)" /></td>
+                                                <td><ValueView Value="@(item is JsonObject record ? record[column.Key] : null)" Names="View.Names" /></td>
                                             }
                                         </tr>
                                     }
@@ -93,12 +95,12 @@
                 </section>
                 break;
             case Board board:
-                <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="@Rejection" />
+                <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="Rejection" Names="View.Names" />
                 break;
             @* Moves of named inputs that none of are available now leave nothing to show; "*" always says so. *@
             case Actions actions when Moves is not null && (actions.Inputs is null || Offered(actions).Count > 0):
                 <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? "Moves")" Side="false"
-                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="@Rejection" />
+                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" />
                 break;
         }
     }
@@ -120,7 +122,7 @@
     [Parameter] public EventCallback<(ValidInput Move, IReadOnlyDictionary<string, JsonNode?>? Open)> OnPlay { get; set; }
     [Parameter] public ValidInput? Refused { get; set; }
     [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
-    [Parameter] public string? Rejection { get; set; }
+    [Parameter] public IReadOnlyList<string>? Rejection { get; set; }
 
     private JsonNode? Read(Binding binding) => binding.Read(name => Projections.GetValueOrDefault(name), Data);
 
@@ -134,10 +136,10 @@
 
     private static string? ToneClass(Tone tone) => tone == Tone.neutral ? null : tone.ToString();
 
-    private static string Scalar(JsonNode? node) => node switch
+    private string Scalar(JsonNode? node) => node switch
     {
         null => "—",
-        JsonValue v when v.GetValueKind() == JsonValueKind.String => v.GetValue<string>(),
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => View.Names.Value(v.GetValue<string>()),
         _ => node.ToJsonString(),
     };
 

@@ -9,7 +9,7 @@ else if (Pieces is not null && Pieces.TryGetValue(Text, out Piece piece))
 }
 else
 {
-    <span class="square-text">@Text</span>
+    <span class="square-text">@Names.Value(Text)</span>
 }
 
 @code {
@@ -17,4 +17,7 @@ else
     [Parameter] public string? Text { get; set; }
 
     [Parameter] public IReadOnlyDictionary<string, Piece>? Pieces { get; set; }
+
+    /// <summary>What the view calls a value with no piece of its own.</summary>
+    [Parameter] public Names Names { get; set; } = Names.None;
 }

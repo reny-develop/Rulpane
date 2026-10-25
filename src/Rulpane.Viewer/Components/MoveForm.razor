@@ -8,11 +8,11 @@
     {
         string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
         <label class="field @(codes.Length > 0 ? "invalid" : null)">
-            <span class="label">@parameter.Name <span class="chip">@Kind(parameter)</span></span>
+            <span class="label">@Names.Param(parameter.Name) <span class="chip">@Kind(parameter)</span></span>
             <input @bind="values[parameter.Name]" placeholder="@Kind(parameter)" aria-invalid="@(codes.Length > 0)" />
             @foreach (string refusal in codes)
             {
-                <span class="rejection"><Icon Name="alert" Size="14" /><code>@refusal</code> refused by the rules</span>
+                <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix=" refused by the rules" /></span>
             }
             @if (parameter.Description is { Fields.Count: > 0 } bounds)
             {
@@ -28,6 +28,7 @@
 @code {
     [Parameter, EditorRequired] public ValidInput Move { get; set; } = default!;
     [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    [Parameter] public Names Names { get; set; } = Names.None;
     [Parameter] public EventCallback<IReadOnlyDictionary<string, JsonNode?>> OnSubmit { get; set; }
 
     /// <summary>The codes the rules answered the last attempt with, by the parameter they are about.</summary>
