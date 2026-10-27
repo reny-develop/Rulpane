@@ -165,6 +165,7 @@ h1, h2, h3, p { margin: 0; }
 .details-section.watch { padding: 12px; border-radius: var(--radius-md); background: var(--color-danger-soft); }
 .details-section.watch h3 { color: var(--color-danger); }
 .details-section.watch p { color: var(--color-text); }
+.details-author { font-size: 13px; color: var(--color-muted); }
 .details-document { display: flex; flex-direction: column; gap: 4px; }
 .details-document h3 { font-size: 12px; font-weight: 600; }
 .details-document pre {
@@ -354,8 +355,10 @@ button:focus-visible, .button:focus-visible, input:focus-visible, textarea:focus
     border-radius: calc(var(--radius-md) + 2px);
     background: var(--color-sunken);
 }
+/* The fields of a form side by side while there is room, each at least wide enough to type in. */
+.move-form .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.field .label { display: flex; align-items: center; gap: 6px; font: 500 13px var(--font-mono); }
+.field .label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
 .field small { color: var(--color-muted); font-size: 12px; }
 .field.invalid input, .field.invalid select { border-color: var(--color-danger); box-shadow: 0 0 0 0.5px var(--color-danger); }
 
@@ -401,12 +404,37 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .stat { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; }
 .stat-label { font-size: 12px; font-weight: 500; color: var(--color-muted); }
 .stat-value { font: 600 30px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+/* A written number breaks only where it has a space, before its unit, never inside its digits. */
+.stat-value.number { overflow-wrap: normal; }
 
 .table-scroll { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th { padding: 10px 18px; text-align: left; font-size: 12px; font-weight: 500; color: var(--color-muted); border-bottom: 1px solid var(--color-line); white-space: nowrap; }
 .table td { padding: 10px 18px; vertical-align: top; overflow-wrap: anywhere; }
 .table tbody tr + tr td { border-top: 1px solid var(--color-line); }
+/* A number written to a format reads down its column at the right, digit under digit. */
+.table .number { text-align: right; white-space: nowrap; }
+.table td.number, .rows .number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* A chart: a scale down the left, bars stacked from the floor, a label under every few. */
+.chart-card .card-head { flex-wrap: wrap; gap: 8px 16px; }
+.chart-legend { display: flex; gap: 14px; margin: 0 0 0 auto; padding: 0; list-style: none; font-size: 12px; color: var(--color-muted); }
+.chart-legend li { display: flex; align-items: center; gap: 6px; }
+.chart-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
+.chart { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 20px 18px 12px; }
+.chart-scale { position: relative; height: 220px; min-width: 40px; font: 11px var(--font-mono); color: var(--color-muted); }
+.chart-scale span { position: absolute; right: 0; transform: translateY(50%); white-space: nowrap; }
+.chart-plot { position: relative; display: flex; align-items: flex-end; height: 220px; padding-bottom: 0; margin-bottom: 22px; }
+.chart-line { position: absolute; left: 0; right: 0; height: 1px; background: var(--color-line); }
+.chart-column { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; min-width: 0; }
+.chart-bar { display: flex; flex-direction: column-reverse; width: 62%; height: 100%; justify-content: flex-start; }
+.chart-bar span:last-child { border-radius: 3px 3px 0 0; }
+.chart-label { position: absolute; top: 100%; margin-top: 6px; font-size: 11px; color: var(--color-muted); white-space: nowrap; }
+.chart .neutral, .chart-legend .neutral { background: var(--color-line-strong); }
+.chart .accent, .chart-legend .accent { background: var(--color-accent); }
+.chart .ok, .chart-legend .ok { background: var(--color-ok); }
+.chart .warn, .chart-legend .warn { background: var(--color-warn); }
+.chart .danger, .chart-legend .danger { background: var(--color-danger); }
 
 /* A board keeps its squares square, and as wide as the card lets it up to a comfortable size. */
 .board-card { padding: 16px 18px 18px; }
@@ -437,7 +465,7 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
     content: ""; width: 22%; height: 22%; border-radius: 50%; background: var(--color-accent); opacity: 0.55;
 }
 /* A value with no piece grows with its square, so a mark on a small board reads as one. */
-.square-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 clamp(11px, 30cqi, 40px) var(--font-mono); }
+.square-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 clamp(11px, 55cqi, 44px)/1 var(--font-mono), "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", sans-serif; }
 .piece { width: 78%; height: 78%; border-radius: 50%; }
 .piece.dark { background: var(--color-piece-dark); box-shadow: inset 0 0 0 1px var(--color-piece-dark-ring); }
 .piece.light { background: var(--color-piece-light); box-shadow: inset 0 0 0 1px var(--color-piece-light-ring); }
@@ -445,6 +473,16 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .piece.ok { background: var(--color-ok); }
 .piece.warn { background: var(--color-warn); }
 .piece.danger { background: var(--color-danger); }
+/* A covered square: the whole of it, so nothing under it shows. */
+.piece.tile { width: 100%; height: 100%; border-radius: inherit; background: var(--color-line-strong); }
+.board.checkered .square.dark { background: var(--color-line); }
+/* Moving from one square to another: the squares a move starts from, the one chosen, and a
+   piece that can be taken, ringed where an empty square would get a dot. */
+.square.origin { cursor: pointer; }
+.square.origin:hover { box-shadow: inset 0 0 0 2px var(--color-accent-soft); }
+.square.selected { background: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); cursor: pointer; }
+.square.target { box-shadow: inset 0 0 0 3px var(--color-accent); }
+.board-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
 .board-rejection { margin-top: 12px; }
 
 /* A theme's compact density: the same screen with less air in it. */
@@ -603,6 +641,7 @@ main.compact { padding-top: 20px; }
     .rows > div { grid-template-columns: 90px minmax(0, 1fr); }
     .layout { gap: 16px; }
     .stat-value { font-size: 24px; }
+    .stat-value.number { font-size: 20px; }
     .table th, .table td { padding: 9px 14px; }
 
     .landing { gap: 36px; padding: 28px 16px 0; }
@@ -627,38 +666,40 @@ main.compact { padding-top: 20px; }
 }
 #blazor-error-ui .dismiss { cursor: pointer; float: right; }
 
-/* ── How to write one: static, from doc/guide.md ─────────── */
+/* ── How to write one: static, from doc/guide*.md ────────── */
 
-/* Outside the app, so it is there for a reader that does not run the page. Shown below the
-   start page, and only there. */
+/* Outside the app, so it is there for a reader that does not run the page: one article per
+   language, the page's own shown. Laid out as a section of the start page, and only there. */
 body:has(main .play) #guide, body:has(main .failure) #guide { display: none; }
-.guide {
-    max-width: 1040px;
-    margin: 0 auto 64px;
-    padding: 28px 32px;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-lg);
-    background: var(--color-surface);
-    font-size: 14px;
-    line-height: 1.65;
-    color: var(--color-text);
-    scroll-margin-top: 80px;
+html:not([lang="ja"]) .guide > [lang="ja"], html[lang="ja"] .guide > [lang="en"] { display: none; }
+/* What an AI reads, styles unapplied: the page never shows it. */
+.guide > .for-ai { display: none; }
+.guide { max-width: 1072px; margin: 0 auto; padding: 0 16px 64px; color: var(--color-text); scroll-margin-top: 80px; }
+.guide article { display: flex; flex-direction: column; gap: 14px; }
+.guide h2 { font-size: 18px; font-weight: 600; }
+.guide h2 + p { margin-top: -12px; font-size: 13px; color: var(--color-muted); }
+.guide code { font-family: var(--font-mono); }
+.guide .card { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.guide pre { margin: 0; padding: 12px 14px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-sunken); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.guide .card p { font-size: 13px; color: var(--color-muted); }
+.guide ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.guide li { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); }
+.guide li > p { font-size: 13px; color: var(--color-muted); }
+.guide li > p:first-child a { display: flex; align-items: center; font-size: 15px; font-weight: 600; color: var(--color-text); }
+.guide li > p:first-child a:hover { text-decoration: none; color: var(--color-accent); }
+.guide li > p:first-child a::after {
+    content: "";
+    width: 16px; height: 16px;
+    margin-left: auto;
+    background: var(--color-accent);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M13 5l7 7-7 7'/%3E%3C/svg%3E") center / contain no-repeat;
 }
-.guide > h1:first-child { margin-top: 0; font-size: 22px; }
-.guide h1, .guide h2, .guide h3, .guide h4 { font-weight: 600; line-height: 1.3; }
-.guide h2 { margin: 36px 0 10px; font-size: 18px; }
-.guide h3 { margin: 26px 0 8px; font-size: 15px; }
-.guide h4 { margin: 20px 0 6px; font-size: 13px; color: var(--color-muted); }
-.guide p, .guide ul, .guide ol { margin: 8px 0; }
-.guide li { margin: 3px 0; }
-.guide code { padding: 1px 4px; border-radius: 4px; background: var(--color-sunken); font: 12.5px var(--font-mono); overflow-wrap: anywhere; }
-.guide pre { margin: 10px 0; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-sunken); overflow-x: auto; }
-.guide pre code { padding: 0; background: none; overflow-wrap: normal; white-space: pre; }
-.guide table { display: block; max-width: 100%; margin: 10px 0; overflow-x: auto; border-collapse: collapse; font-size: 13px; }
-.guide th, .guide td { padding: 6px 10px; border-bottom: 1px solid var(--color-line); text-align: left; vertical-align: top; }
-.guide th { font-weight: 600; color: var(--color-muted); }
-.guide td code { white-space: nowrap; }
+.guide li > p:last-child { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.guide li > p:last-child code { padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-sunken); font-size: 12px; font-weight: 500; line-height: 1.4; }
+.guide ul ~ p { font-size: 12px; color: var(--color-muted); }
+.guide ul ~ p + p { margin-top: -10px; }
 
-@media (max-width: 1080px) {
-    .guide { margin: 0 16px 48px; padding: 20px 16px; }
+@media (max-width: 720px) {
+    .guide { padding: 0 16px 48px; }
+    .guide ul { grid-template-columns: minmax(0, 1fr); gap: 12px; }
 }

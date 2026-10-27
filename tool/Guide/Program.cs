@@ -1,18 +1,23 @@
 // Writes the guide to writing a paneset where a person or an AI reading the site finds it, and
-// holds it to what the viewer runs.
+// holds what it points at to what the viewer runs.
 //
 //   dotnet run --project tool/Guide              write llms.txt and the guide in index.html
-//   dotnet run --project tool/Guide -- --check   fail if either is behind doc/guide.md, or the guide is wrong
+//   dotnet run --project tool/Guide -- --check   fail if either is behind doc/guide*.md, or a sample does not open
 //
-// doc/guide.md is the one source; the table of plugins in it is filled in from the runtime. It goes out twice: as wwwroot/llms.txt, as it is, and as HTML
-// in wwwroot/index.html between <!-- guide --> and <!-- /guide -->, outside the app, so a reader
-// that fetches the page without running it — which is how an AI reads a page — reads it too.
+// doc/guide.md and doc/guide.ja.md are the short guide people see, one per language the start page
+// speaks; doc/guide.ai.md is the longer one for an AI, which the page never shows. All three go out as
+// HTML in wwwroot/index.html between <!-- guide en --> and <!-- /guide en --> (and ja, and ai),
+// outside the app, so a reader that fetches the page without running it — which is how an AI most
+// often reads a page, styles unapplied — reads them; the page shows the one in its own language. The
+// AI's and the English one also go out together as wwwroot/llms.txt.
 //
-// Before writing either, it checks what the guide says against the code that will run it:
-//   - every operation it writes is one the curated runtime registers, and its table lists every one;
-//   - every example under ```json paneset opens as a link would, and plays from its start — the
-//     first move each time, up to 24, every position checked against the view;
-//   - every link under ```text link opens.
+// No guide holds the vocabulary: they say where to look it up, in the Registry and the Gallery. The
+// AI's lists the plugins, filled in from the runtime. What they hold is checked against the code that
+// will run it:
+//   - every operation a guide writes as "op": "…" is one the runtime registers;
+//   - every bundled paneset, the start page's samples, opens as a link would, and plays from its
+//     start — the first move each time, up to 24, every position checked against the view;
+//   - every example under ```json paneset in the guide does the same, and every link under ```text link opens.
 
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -28,37 +33,95 @@ if (args.Length > 0 && !check)
 }
 
 string root = FindRoot();
-string source = Path.Combine(root, "doc", "guide.md");
 string wwwroot = Path.Combine(root, "src", "Rulpane.Viewer", "wwwroot");
 string llms = Path.Combine(wwwroot, "llms.txt");
 string index = Path.Combine(wwwroot, "index.html");
-string guide = File.ReadAllText(source).ReplaceLineEndings("\n");
-
-var problems = new List<string>();
 RuleRuntime runtime = CuratedRuntime.Create();
 
 // The plugins, and the version a rule set should require of each, are the runtime's own.
-guide = guide.Replace("<!-- requires -->", string.Join("\n", runtime.Plugins.OrderBy(p => p.Id, StringComparer.Ordinal).Select(p =>
-    $"| `{p.Id}` (`{p.Namespace}.`) | `{{ \"plugin\": \"{p.Id}\", \"version\": \"^{p.Version.Major}.{p.Version.Minor}\" }}` |")));
+string requires = string.Join("\n", runtime.Plugins.OrderBy(p => p.Id, StringComparer.Ordinal).Select(p =>
+    $"| `{p.Id}` (`{p.Namespace}.`) | `{{ \"plugin\": \"{p.Id}\", \"version\": \"^{p.Version.Major}.{p.Version.Minor}\" }}` |"));
+var guides = new[] { ("ai", "guide.ai.md"), ("en", "guide.md"), ("ja", "guide.ja.md") }
+    .Select(g => (Lang: g.Item1, File: g.Item2, Text: File.ReadAllText(Path.Combine(root, "doc", g.Item2)).ReplaceLineEndings("\n").Replace("<!-- requires -->", requires)))
+    .ToArray();
 
-// The operations: each one the guide writes as "op": "…" or lists in a table's first column,
-// against what the runtime registers.
+var problems = new List<string>();
 var registered = runtime.Operations.Select(o => o.Op).ToHashSet(StringComparer.Ordinal);
-var named = Regex.Matches(guide, @"(?:""op"":\s*""|^\| `)([a-z]+\.[a-zA-Z]+)", RegexOptions.Multiline)
-    .Select(m => m.Groups[1].Value)
-    .ToHashSet(StringComparer.Ordinal);
-problems.AddRange(named.Except(registered).Order().Select(op => $"names {op}, which the runtime does not register"));
-problems.AddRange(registered.Except(named).Order().Select(op => $"never names {op}, which the runtime registers"));
+foreach (var (_, file, text) in guides)
+{
+    problems.AddRange(Regex.Matches(text, @"""op"":\s*""([a-z]+\.[a-zA-Z]+)""").Select(m => m.Groups[1].Value)
+        .Where(op => !registered.Contains(op)).Distinct().Order().Select(op => $"doc/{file} names {op}, which the runtime does not register"));
+}
 
-// The examples, opened as the viewer opens a link, over the bundled documents.
 using var http = new HttpClient(new Files(wwwroot)) { BaseAddress = new Uri("http://guide/") };
 var opener = new Opener(http, runtime);
 int examples = 0;
-foreach (Match block in Regex.Matches(guide, "```(json paneset|text link)\n(.*?)\n```", RegexOptions.Singleline))
+
+foreach (string path in Directory.EnumerateFiles(Path.Combine(wwwroot, "panesets"), "*.json").Order(StringComparer.Ordinal))
 {
     examples++;
-    string text = block.Groups[2].Value;
-    string fragment = block.Groups[1].Value == "text link"
+    await Try($"wwwroot/panesets/{Path.GetFileName(path)}", "text link", $"#p={Path.GetFileNameWithoutExtension(path)}");
+}
+
+foreach (var (_, file, text) in guides)
+{
+    foreach (Match block in Regex.Matches(text, "```(json paneset|text link)\n(.*?)\n```", RegexOptions.Singleline))
+    {
+        examples++;
+        await Try($"doc/{file} {Line(text, block.Index)}", block.Groups[1].Value, block.Groups[2].Value);
+    }
+}
+
+if (problems.Count > 0)
+{
+    problems.ForEach(Console.Error.WriteLine);
+    return 1;
+}
+
+// The ::: lines are the page's cards; to a reader of plain text they are noise.
+string plain = string.Join("\n", guides.Where(g => g.Lang != "ja").Select(g => Regex.Replace(g.Text, @"^:::.*\n", "", RegexOptions.Multiline)));
+string page = File.ReadAllText(index).ReplaceLineEndings("\n");
+string written = page;
+var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+foreach (var (lang, _, text) in guides)
+{
+    var marked = new Regex($"(<!-- guide {lang} -->\n)(?:.*?\n)?( *<!-- /guide {lang} -->)", RegexOptions.Singleline);
+    if (!marked.IsMatch(written))
+    {
+        Console.Error.WriteLine($"index.html has no <!-- guide {lang} --> … <!-- /guide {lang} --> to write the guide between");
+        return 1;
+    }
+
+    string html = Markdown.ToHtml(text, pipeline).TrimEnd();
+    written = marked.Replace(written, m => m.Groups[1].Value + html + "\n" + m.Groups[2].Value);
+}
+
+if (check)
+{
+    var stale = new List<string>();
+    if (!File.Exists(llms) || File.ReadAllText(llms).ReplaceLineEndings("\n") != plain)
+    {
+        stale.Add("llms.txt");
+    }
+
+    if (page != written)
+    {
+        stale.Add("index.html");
+    }
+
+    stale.ForEach(f => Console.Error.WriteLine($"{f} is behind doc/guide*.md: run dotnet run --project tool/Guide"));
+    Console.WriteLine($"{examples} examples");
+    return stale.Count > 0 ? 1 : 0;
+}
+
+File.WriteAllText(llms, plain);
+File.WriteAllText(index, written);
+Console.WriteLine($"{examples} examples → llms.txt, index.html");
+return 0;
+
+async Task Try(string where, string kind, string text)
+{
+    string fragment = kind == "text link"
         ? text[(text.IndexOf('#') is var hash and >= 0 ? hash : throw new InvalidOperationException($"a link with no '#': {text}"))..]
         : Fragment.Build(("p", Fragment.Pack(JsonNode.Parse(text, documentOptions: new() { CommentHandling = System.Text.Json.JsonCommentHandling.Skip })!.ToJsonString())));
     try
@@ -68,48 +131,9 @@ foreach (Match block in Regex.Matches(guide, "```(json paneset|text link)\n(.*?)
     }
     catch (Exception e)
     {
-        problems.Add($"example {examples} ({Line(block.Index)}) does not open: {e.Message}");
+        problems.Add($"{where} does not open: {e.Message}");
     }
 }
-
-if (problems.Count > 0)
-{
-    problems.ForEach(p => Console.Error.WriteLine($"doc/guide.md {p}"));
-    return 1;
-}
-
-string html = Markdown.ToHtml(guide, new MarkdownPipelineBuilder().UseAdvancedExtensions().Build());
-string page = File.ReadAllText(index).ReplaceLineEndings("\n");
-var marked = new Regex("(<!-- guide -->\n)(?:.*?\n)?( *<!-- /guide -->)", RegexOptions.Singleline);
-if (!marked.IsMatch(page))
-{
-    Console.Error.WriteLine("index.html has no <!-- guide --> … <!-- /guide --> to write the guide between");
-    return 1;
-}
-
-string written = marked.Replace(page.ReplaceLineEndings("\n"), m => m.Groups[1].Value + html.TrimEnd() + "\n" + m.Groups[2].Value);
-if (check)
-{
-    var stale = new List<string>();
-    if (!File.Exists(llms) || File.ReadAllText(llms).ReplaceLineEndings("\n") != guide)
-    {
-        stale.Add("llms.txt");
-    }
-
-    if (page.ReplaceLineEndings("\n") != written)
-    {
-        stale.Add("index.html");
-    }
-
-    stale.ForEach(f => Console.Error.WriteLine($"{f} is behind doc/guide.md: run dotnet run --project tool/Guide"));
-    Console.WriteLine($"{named.Count} operations, {examples} examples");
-    return stale.Count > 0 ? 1 : 0;
-}
-
-File.WriteAllText(llms, guide);
-File.WriteAllText(index, written);
-Console.WriteLine($"{named.Count} operations, {examples} examples → llms.txt, index.html");
-return 0;
 
 // The first move each time, as the Gallery tries a release: a view that breaks at some position
 // breaks there for whoever reaches it.
@@ -130,7 +154,7 @@ static void Play(Opened opened)
     }
 }
 
-string Line(int at) => $"line {guide[..at].Count(c => c == '\n') + 1}";
+static string Line(string text, int at) => $"line {text[..at].Count(c => c == '\n') + 1}";
 
 static string FindRoot()
 {

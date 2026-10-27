@@ -19,7 +19,7 @@
     @if (session is not null && Unverified)
     {
         @* In the bar, which only Rulpane draws, so nothing a link lays out can cover it or imitate it. *@
-        <Provenance Documents="Carried" Published="Published" Gallery="gallery" InLink="InLink" />
+        <Provenance Documents="Carried" Gallery="gallery" />
     }
     else if (session is not null)
     {
@@ -27,9 +27,9 @@
     }
     <span class="spacer"></span>
     <nav class="bar-links">
-        <a class="button ghost small" href="@(BaseUri + "#ask")">@Say("Ask an AI", "AI に頼む")</a>
+        <a class="button ghost small" href="@(BaseUri + "#ask")">@Say("Write a request for an AI", "AI に頼む文を作る")</a>
         <a class="button ghost small" href="@(BaseUri + "#guide")">@Say("How to write", "書き方")</a>
-        <a class="button ghost small" href="@(BaseUri + "#make")"><Icon Name="code" Size="14" />@Say("Write one", "ここで書く")</a>
+        <a class="button ghost small" href="@(BaseUri + "#make")"><Icon Name="code" Size="14" />@Say("From JSON", "JSON から作る")</a>
     </nav>
 </header>
 
@@ -198,11 +198,6 @@
     private IReadOnlyList<Document> Held => opened?.Held ?? [];
 
     private IReadOnlyDictionary<Source, string> texts => opened!.Texts;
-
-    // The rule sets from the Registry this screen runs: the rules themselves, and what they hold.
-    private List<string> Published =>
-        [.. source is { IsRegistered: true } ? new[] { $"{source.Reference.Id} {source.Reference.Version}" } : [],
-         .. Held.Select(d => $"{d.Id} {d.Version}")];
 
     // The documents this screen is made from, as their author wrote them, for whoever wants to read them.
     private List<(string Name, string Text)> Carried =>

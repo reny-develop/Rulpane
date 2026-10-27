@@ -1,0 +1,85 @@
+{
+  "$schema": "rulealize/ruleset/v1",
+  "id": "packing-list",
+  "version": "1.0.0",
+
+  // What to take, and what is in the bag already. Items are added as they come to mind and
+  // ticked as they are packed; the list is the link, so bookmarking it keeps it for next time.
+  //
+  // Nothing ends it: a list for the next trip is the same list with everything unpacked.
+
+  "requires": [
+    { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.State", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Sequence", "version": "^1.2" },
+    { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Logic", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Binding", "version": "^1.0" },
+    { "plugin": "Rulealize.Plugin.Definition", "version": "^1.0" }
+  ],
+
+  "state": {
+    "schema": {
+      "items": { "op": "type.list", "element": { "op": "type.string", "minLength": 1, "maxLength": 40 } },
+      "packed": { "op": "type.list", "element": { "op": "type.string", "minLength": 1, "maxLength": 40 } }
+    },
+    "initial": { "items": [], "packed": [] }
+  },
+
+  "definitions": {
+    // Listed and not yet packed, in the order they were listed.
+    "left": {
+      "op": "seq.where", "source": "$items", "as": "i",
+      "predicate": {
+        "op": "logic.not",
+        "value": { "op": "seq.any", "source": "$packed", "as": "p", "predicate": { "op": "cmp.eq", "left": "@p", "right": "@i" } }
+      }
+    }
+  },
+
+  "inputs": {
+    "add": {
+      "params": { "item": { "open": { "op": "type.string", "minLength": 1, "maxLength": 40 } } },
+      "validate": [
+        {
+          "require": {
+            "op": "logic.not",
+            "value": { "op": "seq.any", "source": "$items", "as": "i", "predicate": { "op": "cmp.eq", "left": "@i", "right": "@item" } }
+          },
+          "code": "item.listed"
+        }
+      ],
+      "effects": [
+        { "op": "state.set", "path": "items", "value": { "op": "seq.concat", "of": ["$items", { "op": "seq.of", "of": ["@item"] }] } }
+      ]
+    },
+    "pack": {
+      "params": { "item": { "domain": "#left" } },
+      "effects": [
+        { "op": "state.set", "path": "packed", "value": { "op": "seq.concat", "of": ["$packed", { "op": "seq.of", "of": ["@item"] }] } }
+      ]
+    },
+    "unpack": {
+      "params": { "item": { "domain": "$packed" } },
+      "effects": [
+        { "op": "state.set", "path": "packed", "value": { "op": "seq.where", "source": "$packed", "as": "p", "predicate": { "op": "cmp.ne", "left": "@p", "right": "@item" } } }
+      ]
+    },
+    "remove": {
+      "params": { "item": { "domain": "$items" } },
+      "effects": [
+        { "op": "state.set", "path": "items", "value": { "op": "seq.where", "source": "$items", "as": "i", "predicate": { "op": "cmp.ne", "left": "@i", "right": "@item" } } },
+        { "op": "state.set", "path": "packed", "value": { "op": "seq.where", "source": "$packed", "as": "p", "predicate": { "op": "cmp.ne", "left": "@p", "right": "@item" } } }
+      ]
+    }
+  },
+
+  "projections": {
+    "left": "#left",
+    "packed": "$packed",
+    "counts": {
+      "left": { "op": "seq.count", "source": "#left" },
+      "packed": { "op": "seq.count", "source": "$packed" }
+    }
+  }
+}

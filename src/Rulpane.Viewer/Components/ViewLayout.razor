@@ -27,7 +27,11 @@
                             <div>
                                 <dt>@row.Label</dt>
                                 <dd>
-                                    @if (row.Tones is not null && value is JsonValue)
+                                    @if (row.Format?.Write(value) is string written)
+                                    {
+                                        <span class="number">@written</span>
+                                    }
+                                    else if (row.Tones is not null && value is JsonValue)
                                     {
                                         @* The tone is keyed by the value the rules hold; the chip says what the view calls it. *@
                                         string text = Display.Unquote(value.ToJsonString());
@@ -50,7 +54,14 @@
                     {
                         <div class="card stat">
                             <span class="stat-label">@stat.Label</span>
-                            <span class="stat-value">@Scalar(Read(stat.Bind))</span>
+                            @if (stat.Format?.Write(Read(stat.Bind)) is string written)
+                            {
+                                <span class="stat-value number">@written</span>
+                            }
+                            else
+                            {
+                                <span class="stat-value">@Scalar(Read(stat.Bind))</span>
+                            }
                         </div>
                     }
                 </div>
@@ -102,7 +113,7 @@
                                     <tr>
                                         @foreach (Column column in columns)
                                         {
-                                            <th>@column.Label</th>
+                                            <th class="@(column.Format is null ? null : "number")">@column.Label</th>
                                         }
                                     </tr>
                                 </thead>
@@ -112,7 +123,15 @@
                                         <tr>
                                             @foreach (Column column in columns)
                                             {
-                                                <td><ValueView Value="@(item is JsonObject record ? record[column.Key] : null)" Names="View.Names" /></td>
+                                                JsonNode? cell = item is JsonObject record ? record[column.Key] : null;
+                                                if (column.Format?.Write(cell) is string written)
+                                                {
+                                                    <td class="number">@written</td>
+                                                }
+                                                else
+                                                {
+                                                    <td><ValueView Value="cell" Names="View.Names" /></td>
+                                                }
                                             }
                                         </tr>
                                     }
@@ -126,6 +145,9 @@
                     }
                 </section>
                 break;
+            case Chart chart:
+                <ChartView Chart="chart" Items="@(Read(chart.Bind) as JsonArray)" Names="View.Names" />
+                break;
             case Board board:
                 <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="Rejection" Names="View.Names" />
                 break;
@@ -135,7 +157,7 @@
             *@
             case Actions actions when Moves is not null && (Offered(actions).Count > 0 || actions.Inputs is null && OnBoards.Count == 0):
                 <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? Say("Moves", "操作"))" Side="false" Select="actions.Select"
-                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" />
+                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" Initial="Filled(actions)" />
                 break;
         }
     }
@@ -170,7 +192,16 @@
     private List<ValidInput> Offered(Actions actions) =>
         Moves!.Where(m => actions.Inputs is null ? !OnBoards.Contains(m) : actions.Inputs.Contains(m.Input)).ToList();
 
-    private HashSet<ValidInput> OnBoards => [.. View.Layout.OfType<Board>().Where(Shown).SelectMany(b => b.SquareMoves(Moves).Values)];
+    private HashSet<ValidInput> OnBoards => [.. View.Layout.OfType<Board>().Where(Shown).SelectMany(b => b.Offered(Moves))];
+
+    // What each field a fill names starts with: the value as it would be typed, so a number stays digits.
+    private Dictionary<string, string>? Filled(Actions actions) =>
+        actions.Fill?.ToDictionary(f => f.Key, f => Read(f.Value) switch
+        {
+            null => "",
+            JsonValue v when v.GetValueKind() == JsonValueKind.String => v.GetValue<string>(),
+            JsonNode other => other.ToJsonString(),
+        });
 
     private static string? ToneClass(Tone tone) => tone == Tone.neutral ? null : tone.ToString();
 

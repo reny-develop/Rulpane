@@ -4,6 +4,8 @@
 @*
     A Grid board, drawn square by square. A square is a button only when the rules offer exactly
     one move of the board's input on it; which squares those are is the rules' answer, not the board's.
+    A board moved on from one square to another takes two: a square a move starts from, then one
+    of the squares that move goes to.
 *@
 
 <section class="card board-card">
@@ -11,7 +13,7 @@
     {
         <div class="card-head"><h2>@Board.Title</h2></div>
     }
-    <div class="board" style="--files: @Shape.Width">
+    <div class="board @(Board.Checkered ? "checkered" : null)" style="--files: @Shape.Width">
         <span></span>
         @for (int x = 0; x < Shape.Width; x++)
         {
@@ -24,23 +26,54 @@
             {
                 string coord = Shape.Coord(x, row);
                 string? text = Value is JsonObject squares && squares[coord] is JsonNode cell ? Text(cell) : null;
+                string shade = Board.Checkered && (x + row) % 2 == 1 ? "dark" : "";
                 if (MoveOn(coord) is ValidInput move)
                 {
-                    <button class="square playable" title="@Names.Describe(move)" aria-label="@($"{Names.Input(Board.Play!.Input)} {coord}")"
+                    <button class="square playable @shade" title="@Names.Describe(move)" aria-label="@($"{Names.Input(Board.Play!.Input)} {coord}")"
                             @onclick="() => OnPlay.InvokeAsync((move, null))">
+                        <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
+                    </button>
+                }
+                else if (selected is not null && coord == selected)
+                {
+                    <button class="square selected @shade" aria-pressed="true" aria-label="@($"{coord}: {Say("chosen; choose again to put it back", "選択中。もう一度押すと戻します")}")"
+                            @onclick="() => Choose(null)">
+                        <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
+                    </button>
+                }
+                else if (selected is not null && Destinations.Contains(coord))
+                {
+                    <button class="square playable @(text is null ? null : "target") @shade" aria-label="@($"{Names.Input(Board.Move!.Input)} {selected} → {coord}")"
+                            @onclick="() => Land(coord)">
+                        <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
+                    </button>
+                }
+                else if (Origins.Contains(coord))
+                {
+                    <button class="square origin @shade" aria-label="@($"{coord}: {(text is null ? Say("empty", "空き") : Names.Value(text))}")"
+                            @onclick="() => Choose(coord)">
                         <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
                     </button>
                 }
                 else
                 {
-                    <span class="square" aria-label="@($"{coord}: {(text is null ? Say("empty", "空き") : Names.Value(text))}")">
+                    <span class="square @shade" aria-label="@($"{coord}: {(text is null ? Say("empty", "空き") : Names.Value(text))}")">
                         <Square Text="@text" Pieces="Board.Pieces" Names="Names" />
                     </span>
                 }
             }
         }
     </div>
-    @if (Rejection is not null && Refused?.Input == Board.Play?.Input)
+    @if (choices is not null)
+    {
+        <div class="board-choices">
+            @foreach (ValidInput choice in choices)
+            {
+                <button class="move" @onclick="() => Play(choice)">@Names.Rendered(choice.Arguments[Board.Move!.Parameter])</button>
+            }
+        </div>
+    }
+    @if (Rejection is not null && (Refused?.Input == Board.Play?.Input || Refused?.Input == Board.Move?.Input))
     {
         <p class="rejection board-rejection"><Icon Name="alert" Size="14" />
             @foreach (var (refusal, i) in Rejection.Select((r, i) => (r, i)))
@@ -68,10 +101,56 @@
     private BoardShape Shape => Board.Shape;
 
     private IReadOnlyDictionary<string, ValidInput> squareMoves = new Dictionary<string, ValidInput>();
+    private IReadOnlyList<(string From, string To, ValidInput Move)> pairs = [];
+    private IReadOnlyCollection<ValidInput>? seen;
 
-    protected override void OnParametersSet() => squareMoves = Board.SquareMoves(Moves);
+    // The square chosen to move from, and the moves to pick between when two land on the same square.
+    private string? selected;
+    private List<ValidInput>? choices;
+
+    protected override void OnParametersSet()
+    {
+        squareMoves = Board.SquareMoves(Moves);
+        pairs = Board.SquarePairs(Moves);
+        if (!ReferenceEquals(seen, Moves))
+        {
+            seen = Moves;
+            selected = null;
+            choices = null;
+        }
+    }
 
     private ValidInput? MoveOn(string coord) => squareMoves.GetValueOrDefault(coord);
+
+    private HashSet<string> Origins => [.. pairs.Select(p => p.From)];
+
+    private HashSet<string> Destinations => [.. pairs.Where(p => p.From == selected).Select(p => p.To)];
+
+    private void Choose(string? from)
+    {
+        selected = from;
+        choices = null;
+    }
+
+    private async Task Land(string to)
+    {
+        var landing = pairs.Where(p => p.From == selected && p.To == to).Select(p => p.Move).ToList();
+        if (landing.Count == 1)
+        {
+            await Play(landing[0]);
+        }
+        else
+        {
+            choices = landing;
+        }
+    }
+
+    private async Task Play(ValidInput move)
+    {
+        selected = null;
+        choices = null;
+        await OnPlay.InvokeAsync((move, null));
+    }
 
     private static string Text(JsonNode cell) =>
         cell is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : cell.ToJsonString();

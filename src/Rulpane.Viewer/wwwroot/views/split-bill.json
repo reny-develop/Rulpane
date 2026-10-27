@@ -1,0 +1,104 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "split-bill@1",
+  "title": "Split the bill",
+  "layout": [
+    {
+      "c": "stats",
+      "items": [
+        {
+          "label": "Total",
+          "bind": "summary.total"
+        },
+        {
+          "label": "Each",
+          "bind": "summary.share"
+        },
+        {
+          "label": "People",
+          "bind": "summary.people"
+        }
+      ]
+    },
+    {
+      "c": "table",
+      "title": "Who settles what",
+      "bind": "balances",
+      "columns": [
+        {
+          "key": "name",
+          "label": "Name"
+        },
+        {
+          "key": "paid",
+          "label": "Paid"
+        },
+        {
+          "key": "pays",
+          "label": "Pays"
+        },
+        {
+          "key": "receives",
+          "label": "Gets back"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Record a payment",
+      "inputs": [
+        "pay"
+      ],
+      "as": "select"
+    },
+    {
+      "c": "table",
+      "title": "Payments",
+      "bind": "payments",
+      "columns": [
+        {
+          "key": "who",
+          "label": "Who paid"
+        },
+        {
+          "key": "what",
+          "label": "For"
+        },
+        {
+          "key": "amount",
+          "label": "Amount"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Add someone",
+      "inputs": [
+        "join"
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Entered one wrong?",
+      "inputs": [
+        "undo"
+      ]
+    }
+  ],
+  "names": {
+    "inputs": {
+      "join": "Add",
+      "pay": "Record",
+      "undo": "Take back the last payment"
+    },
+    "params": {
+      "name": "Name",
+      "who": "Who paid",
+      "what": "For",
+      "amount": "Amount"
+    },
+    "codes": {
+      "name.taken": "Someone has that name already."
+    }
+  }
+}

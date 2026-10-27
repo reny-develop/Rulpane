@@ -13,15 +13,15 @@
             <span class="chip accent">@Say("No server · it all runs in your browser", "サーバーなし · すべてブラウザの中で動きます")</span>
             <h1>@Say("Make a simple system", "リンク１つで")<br />@Say("from one link.", "簡易システムを作る。")</h1>
             <p>
-                @Say("Say what can be done, by whom and when — a claim to approve, a checklist, a sign-off, a roster — and Rulpane makes it a screen anyone can use from the link. Where things stand travels in the link too: send it on, and the next person carries on from there.",
-                     "何ができて、誰が、いつするのか。申請と承認、チェックリスト、回覧の署名、シフト表。それを書けば、Rulpane がリンクから誰でも使える画面にします。いまどこまで進んだかもリンクに入るので、次の人に送れば、そこから続けられます。")
+                @Say("Say what can be done and when it is finished, and Rulpane makes it a screen that runs from one link. Records, tallies, checklists, games played in turns — anything you can put as rules. Where things stand is in the link too: bookmark it to carry on later, or send it on and the next person carries on from there.",
+                     "何ができて、どうなったら終わるのか。その決まりを書けば、Rulpane がリンク 1 つで使える画面にします。記録や集計、チェックリスト、交代で進めるゲームなど、決まりとして書けるものなら作れます。状態もリンクに入るので、ブックマークすれば続きから、人に送ればその人が続きから使えます。")
             </p>
         </div>
 
         <div id="ask" class="card ask">
             <h2>@Say("Ask an AI to make one", "AI に作ってもらう")</h2>
             <input @ref="needInput" @bind="need" @bind:event="oninput" spellcheck="false"
-                   placeholder="@Say("What do you need? e.g. a loan register for the office's laptops", "何が要りますか？　例：事務所のノートパソコンの貸し出し管理")" />
+                   placeholder="@Say("What do you need? e.g. a compound growth simulator for monthly investing", "何が要りますか？　例：積立投資の複利効果シミュレーション")" />
             <p class="prompt">@Prompt</p>
             <div class="make-row">
                 <button class="primary" @onclick="CopyPrompt"><Icon Name="@(promptCopied ? "check" : "copy")" />@(promptCopied ? Say("Copied", "コピーしました") : Say("Copy the request", "依頼文をコピー"))</button>
@@ -32,8 +32,8 @@
 
     <section class="section">
         <div class="section-head">
-            <h2>@Say("Start from one of these", "これを元に始める")</h2>
-            <p>@Say("Each is one paneset — rules, a view and where to start. Open it as it is, or put a copy in the editor below and change what you need.", "どれも 1 つのペインセット（ルール、ビュー、開始状態）です。そのまま開くか、下のエディタにコピーして、必要なところを変えてください。")</p>
+            <h2>@Say("Ready to use", "すぐ使えるもの")</h2>
+            <p>@Say("Open one and use it. “Edit a copy” puts what it is made of, as JSON, into “Make a link from JSON” below.", "そのまま開いて使えます。「コピーして編集」を押すと、中身の JSON が下の「JSON からリンクを作る」に入ります。")</p>
         </div>
         <ul class="samples">
             @foreach (Start start in Starts)
@@ -42,7 +42,6 @@
                     <a class="sample-head" href="@(BaseUri + Fragment.Build(("p", start.Name)))">@start.Title<Icon Name="arrow" /></a>
                     <p>@start.Description</p>
                     <span class="tags">
-                        <span class="chip mono">p=@start.Name</span>
                         <button class="chip" @onclick="() => EditCopy(start.Name)">@Say("Edit a copy", "コピーして編集")</button>
                     </span>
                 </li>
@@ -52,11 +51,11 @@
 
     <section id="make" class="section">
         <div class="section-head">
-            <h2>@Say("Write one here", "ここで書く")</h2>
-            <p>@Say("One document holds the whole screen: r the rules, v the view, t the theme, s where to start — each a name or the document itself. It is checked here first, so the link it hands out is one that opens. What an AI wrote can be pasted here too, as the JSON or as the link.", "画面のすべてを 1 つの文書に書きます。r がルール、v がビュー、t がテーマ、s が開始状態で、どれも名前か文書そのものです。ここで先に確かめるので、渡されるリンクは必ず開けます。AI が書いたものも、JSON でもリンクでも、そのまま貼れます。")</p>
+            <h2>@Say("Make a link from JSON", "JSON からリンクを作る")</h2>
+            <p>@Say("Paste a paneset — the rules, the screen, the look and the state in one JSON document — and press “Make link”: it is opened here first, so the link it gives always opens. What an AI wrote can be pasted as it is, or a link.", "ルール・画面・見た目・状態をまとめた JSON（ペインセット）を貼って「リンクを作る」を押すと、開けるか確かめてからリンクにします。AI が書いたものやリンクもそのまま貼れます。")</p>
         </div>
         <div class="card make">
-            <textarea @ref="editor" @bind="document" @bind:event="oninput" rows="14" spellcheck="false"
+            <textarea @ref="editor" @bind="document" @bind:event="oninput" @bind:after="Edited" rows="14" spellcheck="false"
                       placeholder="@Placeholder"></textarea>
             <div class="make-row">
                 <button class="primary" @onclick="Make"><Icon Name="link" />@Say("Make link", "リンクを作る")</button>
@@ -77,15 +76,19 @@
 @code {
     private sealed record Start(string Name, string Title, string Description);
 
-    // Each is the paneset of the same name in wwwroot/panesets.
+    // Each is the paneset of the same name in wwwroot/panesets, with -ja on it for a page in
+    // Japanese: a view is written in one language, so each sample is bundled once in each.
     private static readonly Start[] Starts =
     [
-        new("expense-claim", Say("Expense claim", "経費の申請"), Say("Drafted, submitted, then approved or sent back with a reason.", "下書きして申請し、承認されるか、理由を付けて差し戻されます。")),
-        new("onboarding", Say("Onboarding", "入社手続き"), Say("A new starter's steps, ticked off in any order until none are left.", "新しく入る人の手続きを、好きな順に済ませて、残りがなくなれば完了です。")),
-        new("sign-off", Say("Sign-off", "回覧の承認"), Say("Two of three must sign, and one refusal ends it.", "3 人のうち 2 人の署名で決まり、1 人でも断れば終わります。")),
-        new("shift-request", Say("Shift request", "シフトの希望"), Say("Ask for one of the open shifts; it is granted or denied.", "空いているシフトの 1 つを希望し、認められるか断られます。")),
-        new("shift-roster", Say("Shift roster", "シフト表"), Say("Put staff on the shifts still open, within what each can work.", "まだ空いているシフトに、それぞれが入れる範囲で人を入れます。")),
+        new(Named("split-bill"), Say("Split the bill", "割り勘"), Say("Record who paid for what, and see what each one pays or gets back.", "立て替えた人と金額を記録すると、1 人ずつの払う額・受け取る額が出ます。")),
+        new(Named("packing-list"), Say("Packing list", "持ち物チェックリスト"), Say("Add what to take and tick it off as it goes in. Bookmark it for the next trip.", "持ち物を足して、詰めたものからチェック。ブックマークすれば次の旅行でも使えます。")),
+        new(Named("scoreboard"), Say("Scoreboard", "点数表"), Say("Enter each player's points, round by round; the totals and the leader show as you go.", "ボウリングやゴルフ、カードゲームの点を入れていくと、合計と首位が出ます。")),
+        new(Named("reversi"), Say("Reversi", "リバーシ"), Say("Two players take turns. Each move changes the link, so you can play apart by sending it back and forth.", "2 人で交互に打ちます。打つたびにリンクが変わるので、送り合えば離れていても対戦できます。")),
+        new(Named("minesweeper"), Say("Minesweeper", "マインスイーパー"), Say("Ten mines on a 9 × 9 board. The first square you open is never one.", "9 × 9 に地雷が 10 個。最初に開けるマスに地雷はありません。")),
+        new(Named("chess"), Say("Chess", "チェス"), Say("Castling, en passant and promotion included. Pick a piece to see where it can go.", "キャスリング、アンパッサン、昇格まで。駒を選ぶと動けるマスが出ます。")),
     ];
+
+    private static string Named(string name) => Language.Code == "ja" ? $"{name}-ja" : name;
 
     private static readonly JsonDocumentOptions Lenient = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
@@ -171,6 +174,15 @@
 
         document = paneset.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
         await editor.FocusAsync();
+    }
+
+    // A link made from what the editor held before is not one for what it holds now: it goes, and
+    // so does a reason that was about the old text, until the link is made again.
+    private void Edited()
+    {
+        link = null;
+        problem = null;
+        linkCopied = false;
     }
 
     // Opened here as the link will be, so a link this page hands out is one that opens.

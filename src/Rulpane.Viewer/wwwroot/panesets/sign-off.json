@@ -1,9 +1,0 @@
-{
-  "$schema": "rulpane/paneset/v1",
-  // A sign-off two of three must give, and one refusal ends: who may sign is what the progress
-  // view reads as all, who has signed is done.
-  "r": "signatures",
-  "v": "progress",
-  "b": { "all": "signatories", "done": "signed" },
-  "s": { "signatories": ["manager", "finance", "legal"], "required": 2, "signed": [], "outcome": "open" }
-}

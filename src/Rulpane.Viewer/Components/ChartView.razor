@@ -1,0 +1,129 @@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@*
+    A list of records as bars, drawn in the page with nothing loaded from elsewhere: each record a
+    bar along the bottom, its parts stacked from the floor, against three or so lines of a round
+    scale. Laid out in HTML rather than an image, so the labels stay legible at any width.
+*@
+
+<section class="card chart-card">
+    <div class="card-head">
+        @if (Chart.Title is not null)
+        {
+            <h2>@Chart.Title</h2>
+        }
+        <ul class="chart-legend">
+            @foreach (ChartBar bar in Chart.Bars)
+            {
+                <li><span class="swatch @bar.Tone"></span>@bar.Label</li>
+            }
+        </ul>
+    </div>
+    @if (rows.Count == 0)
+    {
+        <p class="card-body muted">@Say("Nothing to show.", "表示するものがありません。")</p>
+    }
+    else
+    {
+        <div class="chart" role="img" aria-label="@Described()">
+            <div class="chart-scale">
+                @foreach (decimal tick in ticks)
+                {
+                    <span style="bottom: @Percent(tick)">@Written(tick)</span>
+                }
+            </div>
+            <div class="chart-plot">
+                @foreach (decimal tick in ticks)
+                {
+                    <span class="chart-line" style="bottom: @Percent(tick)"></span>
+                }
+                @foreach (var (row, i) in rows.Select((r, i) => (r, i)))
+                {
+                    <div class="chart-column" title="@Described(row)">
+                        <div class="chart-bar">
+                            @foreach (var (bar, part) in Chart.Bars.Zip(row.Parts))
+                            {
+                                <span class="@bar.Tone" style="height: @Percent(part)"></span>
+                            }
+                        </div>
+                        <span class="chart-label">@(Labelled(i) ? row.Label : null)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Chart Chart { get; set; } = default!;
+
+    /// <summary>The records the bars are made of; null or empty for none.</summary>
+    [Parameter] public JsonArray? Items { get; set; }
+
+    [Parameter] public Names Names { get; set; } = Names.None;
+
+    private sealed record Column(string Label, IReadOnlyList<decimal> Parts);
+
+    private List<Column> rows = [];
+    private List<decimal> ticks = [];
+    private decimal top = 1;
+
+    protected override void OnParametersSet()
+    {
+        rows = [.. (Items ?? []).OfType<JsonObject>().Select(r => new Column(
+            Label(r[Chart.X.Key]),
+            [.. Chart.Bars.Select(b => r[b.Key] is JsonValue v && v.GetValueKind() == JsonValueKind.Number ? Math.Max(0, v.GetValue<decimal>()) : 0)]))];
+
+        // A round step that gives three or so lines below the tallest bar, and the scale up to the line above it.
+        decimal tallest = rows.Select(r => r.Parts.Sum()).DefaultIfEmpty(0).Max();
+        decimal step = Step(tallest / 3);
+        top = Math.Max(step, Math.Ceiling(tallest / step) * step);
+        ticks = [.. Enumerable.Range(0, (int)(top / step) + 1).Select(n => n * step)];
+    }
+
+    // 1, 2 or 5 times a power of ten.
+    private static decimal Step(decimal rough)
+    {
+        if (rough <= 0)
+        {
+            return 1;
+        }
+
+        decimal power = 1;
+        while (power * 10 <= rough)
+        {
+            power *= 10;
+        }
+
+        while (power > rough && power > 0.0001m)
+        {
+            power /= 10;
+        }
+
+        return new[] { 1m, 2m, 5m, 10m }.Select(f => f * power).First(s => s >= rough);
+    }
+
+    private string Percent(decimal value) => $"{Math.Round(value / top * 100, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+
+    // The floor is 0 in any unit.
+    private string Written(decimal value) => value == 0 ? "0" : Chart.Format?.Write(JsonValue.Create(value)) ?? value.ToString("#,0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+    private string Label(JsonNode? value) => Chart.X.Format?.Write(value) ?? value switch
+    {
+        null => "—",
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => Names.Value(v.GetValue<string>()),
+        _ => value.ToJsonString(),
+    };
+
+    // The first, the last, and enough between for about six labels along the bottom.
+    private bool Labelled(int i)
+    {
+        int every = new[] { 1, 2, 5, 10, 20, 50, 100 }.First(n => rows.Count / n <= 6);
+        return i == 0 || i == rows.Count - 1 && every == 1 || (i + 1) % every == 0;
+    }
+
+    private string Described(Column row) =>
+        $"{row.Label}: " + string.Join(", ", Chart.Bars.Zip(row.Parts).Select(p => $"{p.First.Label} {Written(p.Second)}"));
+
+    private string Described() => string.Join("; ", rows.Select(Described));
+}

@@ -19,11 +19,12 @@
             </select>
         </label>
     }
+    <div class="fields">
     @foreach (OpenParameter parameter in Move.Open)
     {
         string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
         <label class="field @(codes.Length > 0 ? "invalid" : null)">
-            <span class="label">@Names.Param(parameter.Name) <span class="chip">@Kind(parameter)</span></span>
+            <span class="label">@Names.Param(parameter.Name)</span>
             @if (Choices(parameter) is string[] choices)
             {
                 @* The schema lists every value it admits, so the screen offers them rather than asking for one to be typed. *@
@@ -37,18 +38,19 @@
             }
             else
             {
-                <input @bind="values[parameter.Name]" placeholder="@Kind(parameter)" aria-invalid="@(codes.Length > 0)" />
+                <input @bind="values[parameter.Name]" inputmode="@(Numeric(parameter) ? "decimal" : null)" aria-invalid="@(codes.Length > 0)" />
             }
             @foreach (string refusal in codes)
             {
                 <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix="@Say(" refused by the rules", " はルールに拒否されました")" /></span>
             }
-            @if (parameter.Description is { Fields.Count: > 0 } bounds && Choices(parameter) is null)
+            @if (Choices(parameter) is null && Bounds(parameter) is string bounds)
             {
-                <small>@Bounds(bounds)</small>
+                <small>@bounds</small>
             }
         </label>
     }
+    </div>
     <div>
         <button type="submit" class="primary move" disabled="@(Picked is null)"><Icon Name="arrow" />@(Moves.Count > 1 ? Names.Input(Move.Input) : Label(Move))</button>
     </div>
@@ -66,6 +68,9 @@
     /// <summary>The codes the rules answered the last attempt with, by the parameter they are about.</summary>
     [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
 
+    /// <summary>What a field for a parameter of that name starts with, as the view fills it.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? Initial { get; set; }
+
     private readonly Dictionary<string, string> values = new();
     private string choice = "";
 
@@ -78,11 +83,24 @@
 
     protected override void OnParametersSet()
     {
+        // A setting the move just changed is the field's again: what is shown is what the rules now hold.
+        bool moved = Initial is not null && (filled is null || !Initial.OrderBy(i => i.Key).SequenceEqual(filled.OrderBy(i => i.Key)));
         foreach (OpenParameter parameter in Move.Open)
         {
-            values.TryAdd(parameter.Name, "");
+            if (moved && Initial!.TryGetValue(parameter.Name, out string? initial))
+            {
+                values[parameter.Name] = initial;
+            }
+            else
+            {
+                values.TryAdd(parameter.Name, "");
+            }
         }
+
+        filled = Initial;
     }
+
+    private IReadOnlyDictionary<string, string>? filled;
 
     private Task Submit()
     {
@@ -101,32 +119,53 @@
             ? values.Select(v => v.GetCanonicalText() ?? "").ToArray()
             : null;
 
-    // The bounds as the document writes them: "min 1 · max 100000".
-    private static string Bounds(RecordValue bounds) =>
-        string.Join(" · ", bounds.Fields.Select(f => $"{f.Key} {Bound(f.Value)}"));
+    private static bool Numeric(OpenParameter parameter) => parameter.Op is "type.int" or "type.decimal";
 
-    // A list or a record has no canonical text of its own, so each is written out from its parts: "values a, b".
-    private static string Bound(RuleValue value) => value switch
+    // What the field takes, as a person would say it: "1,000〜10,000,000", "40 文字まで". Bounds with
+    // no plain way to say them are left to the refusal, which names the code the view can word.
+    private static string? Bounds(OpenParameter parameter)
     {
-        SequenceValue items => string.Join(", ", items.Select(Bound)),
-        RecordValue record => "{" + string.Join(", ", record.Fields.Select(f => $"{f.Key}: {Bound(f.Value)}")) + "}",
-        _ => Display.Unquote(value.GetCanonicalText() ?? "null"),
-    };
+        var bounds = parameter.Description.Fields.ToDictionary(f => f.Key, f => f.Value);
+        string? Number(string key) => bounds.GetValueOrDefault(key)?.GetCanonicalText() is string text && decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal d)
+            ? d.ToString("#,0.##########", System.Globalization.CultureInfo.InvariantCulture)
+            : null;
 
-    // The schema node's name without its plugin, which is all a person filling it in needs.
-    private static string Kind(OpenParameter parameter) => parameter.Op switch
-    {
-        null => "value",
-        string op when op.StartsWith("type.", StringComparison.Ordinal) => op["type.".Length..],
-        string op => op,
-    };
+        var said = new List<string>();
+        if (Numeric(parameter))
+        {
+            switch (Number("min"), Number("max"))
+            {
+                case (string min, string max): said.Add(Say($"{min} to {max}", $"{min}〜{max}")); break;
+                case (string min, null): said.Add(Say($"{min} or more", $"{min} 以上")); break;
+                case (null, string max): said.Add(Say($"{max} or less", $"{max} 以下")); break;
+            }
+        }
+        else
+        {
+            if (Number("minLength") is string least && least != "1")
+            {
+                said.Add(Say($"at least {least} characters", $"{least} 文字以上"));
+            }
+
+            if (Number("maxLength") is string most)
+            {
+                said.Add(Say($"up to {most} characters", $"{most} 文字まで"));
+            }
+        }
+
+        return said.Count == 0 ? null : string.Join(" · ", said);
+    }
 
     // The admitting schema node says what kind of value it takes; anything else is text.
     private static JsonNode Convert(OpenParameter parameter, string text) => parameter.Op switch
     {
-        "type.int" when long.TryParse(text, out long i) => JsonValue.Create(i),
-        "type.number" when double.TryParse(text, out double d) => JsonValue.Create(d),
+        "type.int" when long.TryParse(Digits(text), out long i) => JsonValue.Create(i),
+        "type.decimal" when decimal.TryParse(Digits(text), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal d) => JsonValue.Create(d),
         "type.bool" when bool.TryParse(text, out bool b) => JsonValue.Create(b),
         _ => JsonValue.Create(text),
     };
+
+    // A number may be typed grouped, "30,000", or with full-width digits from a Japanese keyboard.
+    private static string Digits(string text) =>
+        new string([.. text.Trim().Where(c => c != ',' && c != '，').Select(c => c is >= '０' and <= '９' ? (char)(c - '０' + '0') : c == '．' ? '.' : c)]);
 }

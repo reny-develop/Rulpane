@@ -1,0 +1,62 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "packing-list@1",
+  "title": "Packing list",
+  "layout": [
+    {
+      "c": "stats",
+      "items": [
+        {
+          "label": "Still to pack",
+          "bind": "counts.left"
+        },
+        {
+          "label": "Packed",
+          "bind": "counts.packed"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Still to pack",
+      "inputs": [
+        "pack"
+      ]
+    },
+    {
+      "c": "list",
+      "title": "In the bag",
+      "bind": "packed"
+    },
+    {
+      "c": "actions",
+      "title": "Add an item",
+      "inputs": [
+        "add"
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Take out or remove",
+      "inputs": [
+        "unpack",
+        "remove"
+      ],
+      "as": "select"
+    }
+  ],
+  "names": {
+    "inputs": {
+      "add": "Add",
+      "pack": "Packed",
+      "unpack": "Take out",
+      "remove": "Remove"
+    },
+    "params": {
+      "item": "Item"
+    },
+    "codes": {
+      "item.listed": "That is on the list already."
+    }
+  }
+}

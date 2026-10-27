@@ -36,8 +36,14 @@ public sealed record Names(
     /// <summary>A value's name, looked up by the text the screen would otherwise show.</summary>
     public string Value(string value) => Values.GetValueOrDefault(value, value);
 
-    /// <summary>An argument, a draw or a result as the runtime renders it, quoted or not, put on screen.</summary>
-    public string Rendered(string text) => Value(Display.Unquote(text));
+    /// <summary>
+    /// An argument, a draw or a result as the runtime renders it, quoted or not, put on screen. A
+    /// tuple is its parts in order, each named, those named empty left out: a move <c>e2|e4|-</c>
+    /// whose <c>-</c> the view calls nothing reads <c>e2 → e4</c>.
+    /// </summary>
+    public string Rendered(string text) => Display.Parts(text) is { Count: > 1 } parts
+        ? string.Join(" → ", parts.Select(Value).Where(v => v.Length > 0))
+        : Value(Display.Unquote(text));
 
     /// <summary>
     /// A move as the last-move line and a square's tooltip give it: <c>reject(reason: scope)</c>,

@@ -1,9 +1,0 @@
-{
-  "$schema": "rulpane/paneset/v1",
-  // A request for one of three shifts, granted or denied. Rulealize.RuleSet.Request projects its
-  // stage by the very name the stages view reads, so nothing is bound; it opens with nothing to
-  // request, so this gives it the shifts.
-  "r": "request",
-  "v": "stages",
-  "s": { "subjects": ["mon-am", "mon-pm", "tue-am"], "stage": "draft", "subject": null }
-}

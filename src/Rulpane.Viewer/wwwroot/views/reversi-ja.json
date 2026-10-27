@@ -1,0 +1,46 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "reversi@1",
+  "title": "リバーシ",
+  "layout": [
+    {
+      "c": "fields",
+      "rows": [
+        {
+          "label": "手番",
+          "bind": "$turn"
+        }
+      ]
+    },
+    {
+      "c": "board",
+      "bind": "$board",
+      "play": "place.at",
+      "pieces": {
+        "black": "dark",
+        "white": "light"
+      }
+    },
+    {
+      "c": "actions",
+      "title": "置けるところがない",
+      "inputs": [
+        "pass"
+      ]
+    }
+  ],
+  "names": {
+    "inputs": {
+      "place": "置く",
+      "pass": "パス"
+    },
+    "params": {
+      "at": "マス"
+    },
+    "values": {
+      "black": "黒",
+      "white": "白",
+      "draw": "引き分け"
+    }
+  }
+}

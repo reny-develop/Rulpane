@@ -1,0 +1,52 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "chess@1",
+  "title": "Chess",
+  "layout": [
+    {
+      "c": "fields",
+      "rows": [
+        {
+          "label": "To move",
+          "bind": "$turn"
+        }
+      ]
+    },
+    {
+      "c": "board",
+      "bind": "$board",
+      "move": "move.m",
+      "checkered": true
+    }
+  ],
+  "names": {
+    "inputs": {
+      "move": "Move"
+    },
+    "params": {
+      "m": "move"
+    },
+    "values": {
+      "2": "",
+      "P": "♙︎",
+      "N": "♘︎",
+      "B": "♗︎",
+      "R": "♖︎",
+      "Q": "♕︎",
+      "K": "♔︎",
+      "p": "♟︎",
+      "n": "♞︎",
+      "b": "♝︎",
+      "r": "♜︎",
+      "q": "♛︎",
+      "k": "♚︎",
+      "-": "",
+      "white": "White",
+      "black": "Black",
+      "draw": "Draw",
+      "ep": "en passant",
+      "0-0": "castling",
+      "0-0-0": "castling"
+    }
+  }
+}

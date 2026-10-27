@@ -1,0 +1,15 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "reversi@1",
+  "title": "Reversi",
+  "layout": [
+    { "c": "fields", "rows": [ { "label": "To move", "bind": "$turn" } ] },
+    { "c": "board", "bind": "$board", "play": "place.at", "pieces": { "black": "dark", "white": "light" } },
+    { "c": "actions", "title": "Nowhere to place", "inputs": ["pass"] }
+  ],
+  "names": {
+    "inputs": { "place": "Place", "pass": "Pass" },
+    "params": { "at": "square" },
+    "values": { "black": "Black", "white": "White", "draw": "Draw" }
+  }
+}

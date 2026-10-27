@@ -1,0 +1,58 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "minesweeper@1",
+  "title": "マインスイーパー",
+  "layout": [
+    {
+      "c": "fields",
+      "rows": [
+        {
+          "label": "残りの地雷",
+          "bind": "status.left"
+        },
+        {
+          "label": "いまの操作",
+          "bind": "status.tool"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "操作を切り替える",
+      "inputs": [
+        "flags",
+        "digs"
+      ]
+    },
+    {
+      "c": "board",
+      "bind": "board",
+      "shape": "$board",
+      "play": "tap.at",
+      "pieces": {
+        "h": "tile",
+        "m": "tile"
+      }
+    }
+  ],
+  "names": {
+    "inputs": {
+      "tap": "押す",
+      "flags": "旗を立てる",
+      "digs": "開ける"
+    },
+    "params": {
+      "at": "マス"
+    },
+    "values": {
+      "open": "開ける",
+      "flag": "旗を立てる",
+      "won": "クリア",
+      "lost": "地雷を踏みました",
+      "f": "🚩",
+      "fm": "🚩",
+      "mine": "💣",
+      "x": "💥"
+    }
+  }
+}

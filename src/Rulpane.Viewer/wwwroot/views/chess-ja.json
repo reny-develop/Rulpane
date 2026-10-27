@@ -1,0 +1,52 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "chess@1",
+  "title": "チェス",
+  "layout": [
+    {
+      "c": "fields",
+      "rows": [
+        {
+          "label": "手番",
+          "bind": "$turn"
+        }
+      ]
+    },
+    {
+      "c": "board",
+      "bind": "$board",
+      "move": "move.m",
+      "checkered": true
+    }
+  ],
+  "names": {
+    "inputs": {
+      "move": "動かす"
+    },
+    "params": {
+      "m": "手"
+    },
+    "values": {
+      "2": "",
+      "P": "♙︎",
+      "N": "♘︎",
+      "B": "♗︎",
+      "R": "♖︎",
+      "Q": "♕︎",
+      "K": "♔︎",
+      "p": "♟︎",
+      "n": "♞︎",
+      "b": "♝︎",
+      "r": "♜︎",
+      "q": "♛︎",
+      "k": "♚︎",
+      "-": "",
+      "white": "白",
+      "black": "黒",
+      "draw": "引き分け",
+      "ep": "アンパッサン",
+      "0-0": "キャスリング",
+      "0-0-0": "キャスリング"
+    }
+  }
+}

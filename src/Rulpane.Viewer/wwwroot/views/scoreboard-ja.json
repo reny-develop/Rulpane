@@ -1,0 +1,67 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "scoreboard@1",
+  "title": "点数表",
+  "layout": [
+    {
+      "c": "table",
+      "title": "順位",
+      "bind": "standings",
+      "columns": [
+        {
+          "key": "leading",
+          "label": ""
+        },
+        {
+          "key": "player",
+          "label": "プレイヤー"
+        },
+        {
+          "key": "rounds",
+          "label": "回数"
+        },
+        {
+          "key": "total",
+          "label": "合計"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "点を入れる",
+      "inputs": [
+        "score"
+      ],
+      "as": "select"
+    },
+    {
+      "c": "actions",
+      "title": "プレイヤーを足す",
+      "inputs": [
+        "join"
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "入れ間違えたら",
+      "inputs": [
+        "undo"
+      ]
+    }
+  ],
+  "names": {
+    "inputs": {
+      "score": "入れる",
+      "join": "足す",
+      "undo": "最後の点を取り消す"
+    },
+    "params": {
+      "player": "プレイヤー",
+      "points": "点",
+      "name": "名前"
+    },
+    "codes": {
+      "name.taken": "その名前の人はもういます。"
+    }
+  }
+}

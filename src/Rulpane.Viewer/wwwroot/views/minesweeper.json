@@ -1,0 +1,58 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "minesweeper@1",
+  "title": "Minesweeper",
+  "layout": [
+    {
+      "c": "fields",
+      "rows": [
+        {
+          "label": "Mines left",
+          "bind": "status.left"
+        },
+        {
+          "label": "A tap",
+          "bind": "status.tool"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Switch",
+      "inputs": [
+        "flags",
+        "digs"
+      ]
+    },
+    {
+      "c": "board",
+      "bind": "board",
+      "shape": "$board",
+      "play": "tap.at",
+      "pieces": {
+        "h": "tile",
+        "m": "tile"
+      }
+    }
+  ],
+  "names": {
+    "inputs": {
+      "tap": "Tap",
+      "flags": "Plant flags",
+      "digs": "Open squares"
+    },
+    "params": {
+      "at": "square"
+    },
+    "values": {
+      "open": "opens",
+      "flag": "plants a flag",
+      "won": "Cleared",
+      "lost": "Hit a mine",
+      "f": "🚩",
+      "fm": "🚩",
+      "mine": "💣",
+      "x": "💥"
+    }
+  }
+}

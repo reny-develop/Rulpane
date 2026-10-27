@@ -1,0 +1,24 @@
+{
+  "$schema": "rulpane/paneset/v1",
+  "r": "split-bill",
+  "v": "split-bill",
+  "s": {
+    "people": [
+      "Ann",
+      "Ben",
+      "Cleo"
+    ],
+    "payments": [
+      {
+        "who": "Ann",
+        "what": "Hotel",
+        "amount": 240
+      },
+      {
+        "who": "Ben",
+        "what": "Fuel",
+        "amount": 45
+      }
+    ]
+  }
+}

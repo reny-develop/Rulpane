@@ -1,19 +1,19 @@
 # Rulpane
 
-**Make a simple system from one link.** Rulpane turns one link into a working screen — a request and its approval, a checklist, a sign-off, a loan register, a roster. The link carries the rules (a [Rulealize](https://github.com/reny-develop/Rulealize) rule set), the layout, the look and where things stand, so there is no server, no sign-up and nothing to install: whoever opens the link uses the system, every step rewrites the link, and sending it on hands the system over as it stands. Everything runs in the browser, from GitHub Pages.
+**Make a simple system from one link.** Rulpane turns rules you write into a screen that runs from one link — records, tallies, checklists, games played in turns. The link carries the rules (a [Rulealize](https://github.com/reny-develop/Rulealize) rule set), the layout, the look and where things stand, so there is no server, no sign-up and nothing to install: whoever opens the link uses the system, every step rewrites the link, and sending it on hands the system over as it stands. Everything runs in the browser, from GitHub Pages.
 
 **Open it: <https://reny-develop.github.io/Rulpane/>**
 
 ## Make one
 
-- **Ask an AI.** Give an AI that can read web pages the site's address and say what you need — "Read https://reny-develop.github.io/Rulpane/ and make me a Rulpane link for a loan register for the office's laptops." The start page builds that request for you. The page carries [how to write one](doc/guide.md) as plain HTML, readable without running it, and the same text is at [`llms.txt`](https://reny-develop.github.io/Rulpane/llms.txt).
-- **Start from one that exists.** The start page's panesets — `expense-claim`, `onboarding`, `sign-off`, `shift-request`, `shift-roster` — open as they are, or go into the editor as a copy with their rules and view written out.
+- **Ask an AI.** Give an AI that can read web pages the site's address and say what you need — "Read https://reny-develop.github.io/Rulpane/ and make me a Rulpane link for a compound growth simulator for monthly investing." The start page builds that request for you. The page carries [how to write one](doc/guide.md) ([日本語](doc/guide.ja.md)) as plain HTML, readable without running it, with [a longer part for an AI](doc/guide.ai.md) that the page does not show; both, in English, are at [`llms.txt`](https://reny-develop.github.io/Rulpane/llms.txt). It is short on purpose: it points to the [Registry](https://reny-develop.github.io/Rulealize.Registry/) for the operations rules can use and to the [Gallery](https://reny-develop.github.io/Rulpane.Gallery/) for views, themes and panesets; a whole paneset to copy is any sample's "Edit a copy".
+- **Start from one that exists.** The start page's samples — `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper`, `chess` — open as they are, or go into the editor as a copy with their rules and view written out. Each is bundled twice, the name with `-ja` on it being the same screen with its view in Japanese, and the start page offers the ones in its own language.
 - **Write it.** The editor on the start page takes one paneset, or a link, checks it the way a link is opened, and hands out the link.
 
 | Link | What it shows |
 | --- | --- |
-| [`#p=expense-claim`](https://reny-develop.github.io/Rulpane/#p=expense-claim) | A bundled paneset: rules, view and where to start, named at once |
-| [`#p=expense-claim&t=paper`](https://reny-develop.github.io/Rulpane/#p=expense-claim&t=paper) | The paneset with one of its keys given over |
+| [`#p=split-bill`](https://reny-develop.github.io/Rulpane/#p=split-bill) | A bundled paneset: rules, view and where to start, named at once |
+| [`#p=split-bill&t=paper`](https://reny-develop.github.io/Rulpane/#p=split-bill&t=paper) | The paneset with one of its keys given over |
 | [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | The same rules with no view: the screen is made from the rules |
 | [`#r=approval&s=z:q1Yq…`](https://reny-develop.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE) | The same rules, starting from a position the link carries |
 | [`#p={"$schema":"rulpane/paneset/v1","r":"checklist",…}`](https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":{"all":"$steps","done":"$done"},"s":{"steps":["keys","badge","laptop"],"done":[]}}) | A paneset written into the link as plain JSON, as an AI writes one |
@@ -90,12 +90,17 @@ A binding is a projection then `.`-separated steps into it (`summary.stage`), or
 | --- | --- |
 | `heading` | `text` as a heading |
 | `text` | `text` as a paragraph |
-| `fields` | A card of `rows`, each a `label` and a `bind`. With `tone`, the value is a chip coloured by it: `neutral`, `accent`, `ok`, `warn` or `danger` |
-| `stats` | `items`, each a `label` and a `bind`, set large |
+| `fields` | A card of `rows`, each a `label` and a `bind`. With `tone`, the value is a chip coloured by it: `neutral`, `accent`, `ok`, `warn` or `danger`. With `format`, a number is written to it (below) |
+| `stats` | `items`, each a `label` and a `bind`, set large, and a `format` if the number should be written to one |
 | `list` | The list at `bind`, its values side by side |
-| `table` | The list at `bind`, one record per line. `columns` are keys, or `{ "key", "label" }`; without them, every key |
-| `board` | The Grid board in the state field at `bind` (`$board`), square by square; its size and coordinates come from the field's `grid.board` schema. `play` (`"place.at"`, an input and its parameter) makes each square that input can be played on a button, when exactly one of its moves is played there. `pieces` maps a value to a piece, `dark`, `light`, `accent`, `ok`, `warn` or `danger`; a value it leaves out is shown as text |
-| `actions` | The moves of `inputs`, a list of input names or `"*"` for every move a board on the screen does not already offer as a square. A block naming inputs none of which can be played now is not shown, and neither is `"*"` when the boards offer every move. With `"as": "select"`, the choices of an input with arguments are one list to pick from and a button to play the one picked, in place of a button each (`"buttons"`, the default) |
+| `table` | The list at `bind`, one record per line. `columns` are keys, or `{ "key", "label", "format" }`; without them, every key. A column with a `format` is set to the right |
+| `chart` | The list of records at `bind` as bars, one per record, labelled along the bottom by the key `x` names (`"year"`, or `{ "key": "year", "format": … }`). `bars` lists the keys stacked in each bar from the floor, each with a `label` for the legend and a `tone` (`accent` when left out). The scale runs to a round value above the tallest bar, its numbers written to the chart's `format` |
+| `board` | The Grid board in the state field at `bind` (`$board`), square by square; its size and coordinates come from the field's `grid.board` schema. `play` (`"place.at"`, an input and its parameter) makes each square that input can be played on a button, when exactly one of its moves is played there. `move` (`"move.m"`) is for a move from one square to another, whose parameter is a tuple starting with the two: a square a move starts from is a button, and once it is chosen, the squares it can go to; when two moves share both squares, as a promotion's do, the board asks which. A board has `play` or `move`, not both. `pieces` maps a value to a piece, `dark`, `light`, `accent`, `ok`, `warn`, `danger` or `tile`, a covered square; a value it leaves out is shown as text. `checkered: true` shades every other square, as a chessboard's are |
+| `actions` | The moves of `inputs`, a list of input names or `"*"` for every move a board on the screen does not already offer as a square. A block naming inputs none of which can be played now is not shown, and neither is `"*"` when the boards offer every move. With `"as": "select"`, the choices of an input with arguments are one list to pick from and a button to play the one picked, in place of a button each (`"buttons"`, the default). `fill` maps a parameter to a binding its field starts with, so a form that changes a setting opens on the setting as it is: `"fill": { "years": "$years" }` |
+
+A `format` writes a number for a person: grouped by thousands, divided by `divide` first, rounded to `digits` places when given, between `prefix` and `suffix` — `{ "suffix": " yen" }` is `12,382,389 yen`, `{ "divide": 10000, "suffix": "万" }` is `1,238万`. A value that is not a number is shown as it is.
+
+A form asks for what the rules leave open by the name the view gives the parameter, with what the field takes said plainly under it — `1,000 to 10,000,000`, `up to 40 characters` — and takes a number typed grouped or in full-width digits.
 
 Every block, and every row of `fields`, takes `showWhen`, a binding: it is shown only while that reads `true`. The game's end and its result are shown above the layout whatever the view says.
 
@@ -184,9 +189,9 @@ A paneset (`rulpane/paneset/v1`) is a screen as one document, to be named by a l
 }
 ```
 
-A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p=onboarding` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=onboarding&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
+A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":…,"s":…}` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=scoreboard&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
 
-The bundled panesets are `expense-claim`, `onboarding`, `sign-off`, `shift-request` and `shift-roster`: each is a small system as it is, from the bundled rule sets and views above, some binding what the rules keep under other names.
+The bundled panesets are the start page's samples, each in English and with `-ja` in Japanese: `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper` and `chess`. Each is something to use as it is, with a rule set and a view of its own name.
 
 ## The Gallery
 
@@ -231,7 +236,7 @@ A theme is checked when the link is opened. Every pair of colours the screen set
 
 ## Who made the screen
 
-When the rules, the view or the theme came in the link rather than with the viewer, the top bar says so in place of the rule set's name: "Made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." A paneset counts as the link when the link carries it; a part a paneset from the Gallery writes in place is its author's. When nothing came in the link but the rules are from the Registry or something is from the Gallery, it says "Published by others, not by Rulpane." in place of the first sentence. The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens the detail: who made the screen, which rule sets from the Registry it runs, which releases from the Gallery it is made with and which GitHub account published each, what a link can do, what to watch for, and the documents themselves, the ones the rules hold included.
+When the rules, the view or the theme came in the link rather than with the viewer, and so do the rules from the Registry and anything from the Gallery, the top bar says so in place of the rule set's name: "This screen was made by the link's author, not by Rulpane. Rulpane never asks for passwords or payment." — the same sentence whichever of them it is, since whoever made the link chose them. The bar is the one part of the page a link cannot lay out, and it stays in view as the page scrolls. The sentence is a button that opens a short detail: what to watch for first, then the GitHub accounts that published what the screen takes from the Gallery, and the documents themselves, the ones the rules hold included, for whoever asks to see them.
 
 ## What a link cannot do
 
@@ -246,7 +251,7 @@ A release in the Gallery that misleads can be reported there, with an issue, and
 
 ## Language
 
-Rulpane's own words — the bar and its detail, the title row, the moves and the start page — are in Japanese when the browser's first language is Japanese, and in English otherwise. In Japanese the bar says 「Rulpane ではなく、リンクの作者が作ったものです。Rulpane はパスワードや支払いを求めません。」, or 「他の人が公開したもの」 for rules from the Registry. What a link carries stays in the one language its author wrote it in (see [Names](#names)), and a document refused when the link opens is refused in English, since the message names the document's own keys.
+Rulpane's own words — the bar and its detail, the title row, the moves and the start page — are in Japanese when the browser's first language is Japanese, and in English otherwise. In Japanese the bar says 「この画面は Rulpane ではなく、リンクの作者が作ったものです。Rulpane はパスワードや支払いを求めません。」. What a link carries stays in the one language its author wrote it in (see [Names](#names)), and a document refused when the link opens is refused in English, since the message names the document's own keys.
 
 ## Plugins
 
@@ -267,7 +272,8 @@ To open rule sets from the Registry or releases from the Gallery locally, mirror
 | [`src/Rulpane.Engine`](src/Rulpane.Engine/) | What runs a link, apart from how it is drawn: the curated runtime, the sources a fragment names, the readers of views, themes and panesets. The Gallery reads a submission with this same library, so what it records is what the viewer opens |
 | [`src/Rulpane.Viewer`](src/Rulpane.Viewer/) | The Blazor WebAssembly app around it. `wwwroot/` holds the bundled rule sets, views, themes and panesets |
 | [`tool/Mirror`](tool/Mirror/) | Copies the Registry's rule sets and the Gallery's releases beside the viewer |
-| [`tool/Guide`](tool/Guide/) | Writes [`doc/guide.md`](doc/guide.md) — how to write a paneset, for a person or an AI — into `wwwroot/llms.txt` and into `index.html` outside the app, after checking that every operation it lists is one the runtime runs, that it lists them all, and that its examples open and play. Run it after editing the guide; `pages.yml` runs it with `--check` and publishes nothing if the guide is behind or wrong |
+| [`tool/Guide`](tool/Guide/) | Writes [`doc/guide.md`](doc/guide.md) and [`doc/guide.ja.md`](doc/guide.ja.md), the short guide people see, one per language, and [`doc/guide.ai.md`](doc/guide.ai.md), the one for an AI that the page never shows, into `index.html` outside the app, and the AI's and the English one into `wwwroot/llms.txt`, after checking that every operation they name is one the runtime runs and that every bundled paneset opens and plays. The AI's lists the plugins, filled in from the runtime. Run it after editing either; `pages.yml` runs it with `--check` and publishes nothing if the guide is behind or an example is wrong |
+| [`tool/Minesweeper`](tool/Minesweeper/) | Writes the bundled `minesweeper` rule set, whose cell list, neighbour graph and mine order are too long to keep by hand: `node tool/Minesweeper/minesweeper.mjs src/Rulpane.Viewer/wwwroot/rulesets/minesweeper.json` |
 
 A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
 

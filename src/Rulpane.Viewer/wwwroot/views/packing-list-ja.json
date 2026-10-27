@@ -1,0 +1,62 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "packing-list@1",
+  "title": "持ち物チェックリスト",
+  "layout": [
+    {
+      "c": "stats",
+      "items": [
+        {
+          "label": "残り",
+          "bind": "counts.left"
+        },
+        {
+          "label": "詰めた",
+          "bind": "counts.packed"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "まだ詰めていないもの",
+      "inputs": [
+        "pack"
+      ]
+    },
+    {
+      "c": "list",
+      "title": "かばんの中",
+      "bind": "packed"
+    },
+    {
+      "c": "actions",
+      "title": "持ち物を足す",
+      "inputs": [
+        "add"
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "出す・消す",
+      "inputs": [
+        "unpack",
+        "remove"
+      ],
+      "as": "select"
+    }
+  ],
+  "names": {
+    "inputs": {
+      "add": "足す",
+      "pack": "詰めた",
+      "unpack": "出す",
+      "remove": "消す"
+    },
+    "params": {
+      "item": "持ち物"
+    },
+    "codes": {
+      "item.listed": "もうリストにあります。"
+    }
+  }
+}

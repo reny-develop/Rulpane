@@ -1,6 +1,0 @@
-{
-  "$schema": "rulpane/paneset/v1",
-  // An expense claim: drafted, submitted, then approved or sent back with a reason.
-  "r": "approval",
-  "v": "approval"
-}

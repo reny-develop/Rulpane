@@ -27,8 +27,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # The guide an AI reads to write a link: every operation it lists is one this runtime runs,
-      # every example opens, and llms.txt and index.html are what doc/guide.md says.
+      # The guide a person or an AI reads to write a link: the example it points at opens and plays,
+      # and llms.txt and index.html are what doc/guide.md and doc/guide.ja.md say.
       - name: Hold the guide to the runtime
         run: dotnet run --project tool/Guide -c Release -- --check
 

@@ -1,0 +1,67 @@
+{
+  "$schema": "rulealize/view/v1",
+  "ruleSet": "scoreboard@1",
+  "title": "Scoreboard",
+  "layout": [
+    {
+      "c": "table",
+      "title": "Standings",
+      "bind": "standings",
+      "columns": [
+        {
+          "key": "leading",
+          "label": ""
+        },
+        {
+          "key": "player",
+          "label": "Player"
+        },
+        {
+          "key": "rounds",
+          "label": "Scores"
+        },
+        {
+          "key": "total",
+          "label": "Total"
+        }
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Enter a score",
+      "inputs": [
+        "score"
+      ],
+      "as": "select"
+    },
+    {
+      "c": "actions",
+      "title": "Add a player",
+      "inputs": [
+        "join"
+      ]
+    },
+    {
+      "c": "actions",
+      "title": "Entered one wrong?",
+      "inputs": [
+        "undo"
+      ]
+    }
+  ],
+  "names": {
+    "inputs": {
+      "score": "Enter",
+      "join": "Add",
+      "undo": "Take back the last score"
+    },
+    "params": {
+      "player": "Player",
+      "points": "Points",
+      "name": "Name"
+    },
+    "codes": {
+      "name.taken": "Someone has that name already."
+    }
+  }
+}
