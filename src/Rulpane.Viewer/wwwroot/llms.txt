@@ -53,7 +53,7 @@ A rule set can use only these. Write each one used into `requires` as shown.
 
 | Plugin | In `requires` |
 | --- | --- |
-| `Rulealize.Plugin.Arithmetic` (`math.`) | `{ "plugin": "Rulealize.Plugin.Arithmetic", "version": "^1.1" }` |
+| `Rulealize.Plugin.Arithmetic` (`math.`) | `{ "plugin": "Rulealize.Plugin.Arithmetic", "version": "^1.2" }` |
 | `Rulealize.Plugin.Binding` (`bind.`) | `{ "plugin": "Rulealize.Plugin.Binding", "version": "^1.0" }` |
 | `Rulealize.Plugin.Branch` (`branch.`) | `{ "plugin": "Rulealize.Plugin.Branch", "version": "^1.0" }` |
 | `Rulealize.Plugin.Chance` (`chance.`) | `{ "plugin": "Rulealize.Plugin.Chance", "version": "^1.1" }` |
@@ -65,7 +65,7 @@ A rule set can use only these. Write each one used into `requires` as shown.
 | `Rulealize.Plugin.Logic` (`logic.`) | `{ "plugin": "Rulealize.Plugin.Logic", "version": "^1.0" }` |
 | `Rulealize.Plugin.Record` (`rec.`) | `{ "plugin": "Rulealize.Plugin.Record", "version": "^1.0" }` |
 | `Rulealize.Plugin.Secret` (`secret.`) | `{ "plugin": "Rulealize.Plugin.Secret", "version": "^1.0" }` |
-| `Rulealize.Plugin.Sequence` (`seq.`) | `{ "plugin": "Rulealize.Plugin.Sequence", "version": "^1.4" }` |
+| `Rulealize.Plugin.Sequence` (`seq.`) | `{ "plugin": "Rulealize.Plugin.Sequence", "version": "^1.5" }` |
 | `Rulealize.Plugin.State` (`state.`) | `{ "plugin": "Rulealize.Plugin.State", "version": "^1.0" }` |
 | `Rulealize.Plugin.Text` (`str.`) | `{ "plugin": "Rulealize.Plugin.Text", "version": "^1.0" }` |
 | `Rulealize.Plugin.Tuple` (`tuple.`) | `{ "plugin": "Rulealize.Plugin.Tuple", "version": "^1.0" }` |
