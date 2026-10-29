@@ -62,6 +62,11 @@ write there. Use only the plugins listed at the end of this page.</li>
 </ol>
 </li>
 <li>When nothing in the Gallery is close, start from the whole paneset below.</li>
+<li>Write <code>v</code>, always, in the language the person asked in: a <code>title</code>, a <code>label</code> on every value
+shown, and <code>names</code> for every input and parameter. Without it the screen shows the rules' own
+keys, such as <code>setMonthly</code> and <code>futureValue</code>, and a person cannot tell what they are. Round
+every number a person reads with <code>math.round</code> in the projection: <code>math.div</code> and <code>math.pow</code>
+give a number such as 12331010.055470388734304367250.</li>
 <li>Give the person the link: <code>https://reny-develop.github.io/Rulpane/#p=</code> followed by the paneset
 as JSON on one line, percent-encoded whole as <code>encodeURIComponent</code> would: <code>{</code> as <code>%7B</code>, <code>&quot;</code> as
 <code>%22</code>, a space as <code>%20</code>, and so on, so the link starts <code>#p=%7B%22%24schema%22</code>. A chat cuts a
@@ -138,6 +143,7 @@ publishes that does what was asked, and a <code>v</code> is written for it.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Lists where an expression goes are <code>seq.of</code>, not JSON arrays (arrays are fine in
 <code>state.initial</code>, <code>s</code> and a view).</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> No open parameter is read in <code>when</code>, <code>actor</code> or a <code>domain</code>; every <code>validate</code> clause reads one.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> <code>v</code> is written, in the person's language, and every number shown is rounded.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every view binding names a projection the rules have, or a state field as <code>$name</code>.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> The link is one line, and after <code>#p=</code> holds no <code>{</code>, <code>&quot;</code> or space: it starts <code>#p=%7B%22</code>.</li>
 </ul>

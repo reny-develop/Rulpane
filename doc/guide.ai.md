@@ -35,14 +35,19 @@ the view for it; otherwise write the rules in place.
    4. The view's blocks and keys, in Rulpane's README:
       <https://raw.githubusercontent.com/reny-develop/Rulpane/main/README.md>, under "Views".
 3. When nothing in the Gallery is close, start from the whole paneset below.
-4. Give the person the link: `https://reny-develop.github.io/Rulpane/#p=` followed by the paneset
+4. Write `v`, always, in the language the person asked in: a `title`, a `label` on every value
+   shown, and `names` for every input and parameter. Without it the screen shows the rules' own
+   keys, such as `setMonthly` and `futureValue`, and a person cannot tell what they are. Round
+   every number a person reads with `math.round` in the projection: `math.div` and `math.pow`
+   give a number such as 12331010.055470388734304367250.
+5. Give the person the link: `https://reny-develop.github.io/Rulpane/#p=` followed by the paneset
    as JSON on one line, percent-encoded whole as `encodeURIComponent` would: `{` as `%7B`, `"` as
    `%22`, a space as `%20`, and so on, so the link starts `#p=%7B%22%24schema%22`. A chat cuts a
    link at the first `{`, `"` or space it holds, and what is left opens nothing.
-5. Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
+6. Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
    at <https://reny-develop.github.io/Rulpane/#make>, press "Make link" and tell me the reason it
    shows. The reason names the key that is wrong.
-6. When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
+7. When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
    holding it can take any step, and two people working from one link make two separate histories.
 
 ## A whole paneset
@@ -115,6 +120,7 @@ Cups of water drunk today, against a goal that can be changed. It opens as it is
 - [ ] Lists where an expression goes are `seq.of`, not JSON arrays (arrays are fine in
       `state.initial`, `s` and a view).
 - [ ] No open parameter is read in `when`, `actor` or a `domain`; every `validate` clause reads one.
+- [ ] `v` is written, in the person's language, and every number shown is rounded.
 - [ ] Every view binding names a projection the rules have, or a state field as `$name`.
 - [ ] The link is one line, and after `#p=` holds no `{`, `"` or space: it starts `#p=%7B%22`.
 
