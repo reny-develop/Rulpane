@@ -8,7 +8,7 @@
     <meta name="description" content="Rulpane turns rules you write into a screen that runs from one link: records, tallies, checklists, games played in turns. No server, no sign-up. How to write one, for a person or an AI, is on this page and at llms.txt." />
     <base href="/" />
     <!-- No response headers on GitHub Pages, so the policy lives here. Nothing outside this origin is loaded. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'none'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://reny-develop.github.io https://api.nuget.org; base-uri 'self'; form-action 'none'" />
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
     <script type="importmap"></script>
@@ -40,19 +40,22 @@ carries a <strong>paneset</strong>: one JSON document holding</p>
 <h2 id="what-to-do">What to do</h2>
 <ol>
 <li>Work out what can be done in the system, by whom, and when it is finished.</li>
-<li>Start from a whole example and change it. Each start-page sample is a rule set and a view that
-open as they are:
-<a href="https://reny-develop.github.io/Rulpane/rulesets/split-bill.json">rules</a> and
-<a href="https://raw.githubusercontent.com/reny-develop/Rulpane.Gallery/main/release/reny-develop/split-bill-view/1/document.json">view</a>
-of a split bill, and the same for <code>packing-list</code> and <code>scoreboard</code> (the view's file is under
-<code>release/reny-develop/&lt;name&gt;-view/1/</code>). Write them into the paneset as <code>r</code> and <code>v</code>.</li>
-<li>Look up every operation before using it. The
-<a href="https://reny-develop.github.io/Rulealize.Registry/">Rulealize Registry</a> has a page for each,
-such as <code>https://reny-develop.github.io/Rulealize.Registry/op/seq.where.html</code>, which leads to
-its plugin's specification: that gives every key it takes. How a rule set is laid out is in
-the <a href="https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md">quick guide</a>.
-Use only the plugins listed at the end of this page.</li>
-<li>The view's blocks and keys are in <a href="https://github.com/reny-develop/Rulpane#views">Rulpane's README</a>.</li>
+<li>Read before you write. <strong>Write no operation, type or key from memory</strong>: a name that is not in
+what you read is refused, and the link does not open. Open these, in this order:
+<ol>
+<li>How a rule set is laid out, in Rulealize's quick guide:
+<a href="https://raw.githubusercontent.com/reny-develop/Rulealize/main/doc/ruleset-quickguide.md">https://raw.githubusercontent.com/reny-develop/Rulealize/main/doc/ruleset-quickguide.md</a>.
+It names every top-level key; <code>inputs</code>, the things that may be done, is required.</li>
+<li>What the Rulpane Gallery publishes: <a href="https://reny-develop.github.io/Rulpane.Gallery/llms.txt">https://reny-develop.github.io/Rulpane.Gallery/llms.txt</a>.
+Take the paneset closest to the request and change it, rather than starting from nothing.</li>
+<li>Every operation and the keys it takes, in the Rulealize Registry:
+<a href="https://reny-develop.github.io/Rulealize.Registry/llms.txt">https://reny-develop.github.io/Rulealize.Registry/llms.txt</a>. Look up each operation you
+write there. Use only the plugins listed at the end of this page.</li>
+<li>The view's blocks and keys, in Rulpane's README:
+<a href="https://raw.githubusercontent.com/reny-develop/Rulpane/main/README.md">https://raw.githubusercontent.com/reny-develop/Rulpane/main/README.md</a>, under &quot;Views&quot;.</li>
+</ol>
+</li>
+<li>When nothing in the Gallery is close, start from the whole paneset below.</li>
 <li>Give the person the link: <code>https://reny-develop.github.io/Rulpane/#p=</code> followed by the paneset
 as JSON on one line, with every space written as <code>%20</code>, inside strings too — a chat cuts a link
 at the first space. Nothing else needs encoding.</li>
@@ -62,10 +65,67 @@ shows. The reason names the key that is wrong.</li>
 <li>When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
 holding it can take any step, and two people working from one link make two separate histories.</li>
 </ol>
+<h2 id="a-whole-paneset">A whole paneset</h2>
+<p>Cups of water drunk today, against a goal that can be changed. It opens as it is.</p>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;rulpane/paneset/v1&quot;,
+  &quot;r&quot;: {
+    &quot;$schema&quot;: &quot;rulealize/ruleset/v1&quot;,
+    &quot;id&quot;: &quot;water&quot;,
+    &quot;version&quot;: &quot;1.0.0&quot;,
+    &quot;requires&quot;: [
+      { &quot;plugin&quot;: &quot;Rulealize.Plugin.TypeSchema&quot;, &quot;version&quot;: &quot;^1.3&quot; },
+      { &quot;plugin&quot;: &quot;Rulealize.Plugin.State&quot;, &quot;version&quot;: &quot;^1.0&quot; },
+      { &quot;plugin&quot;: &quot;Rulealize.Plugin.Arithmetic&quot;, &quot;version&quot;: &quot;^1.2&quot; },
+      { &quot;plugin&quot;: &quot;Rulealize.Plugin.Comparison&quot;, &quot;version&quot;: &quot;^1.0&quot; },
+      { &quot;plugin&quot;: &quot;Rulealize.Plugin.Binding&quot;, &quot;version&quot;: &quot;^1.0&quot; }
+    ],
+    &quot;state&quot;: {
+      &quot;schema&quot;: {
+        &quot;cups&quot;: { &quot;op&quot;: &quot;type.int&quot;, &quot;min&quot;: 0, &quot;max&quot;: 30 },
+        &quot;goal&quot;: { &quot;op&quot;: &quot;type.int&quot;, &quot;min&quot;: 1, &quot;max&quot;: 30 }
+      },
+      &quot;initial&quot;: { &quot;cups&quot;: 0, &quot;goal&quot;: 8 }
+    },
+    &quot;inputs&quot;: {
+      &quot;drink&quot;: {
+        &quot;when&quot;: { &quot;op&quot;: &quot;cmp.lt&quot;, &quot;left&quot;: &quot;$cups&quot;, &quot;right&quot;: 30 },
+        &quot;effects&quot;: [{ &quot;op&quot;: &quot;state.set&quot;, &quot;path&quot;: &quot;cups&quot;, &quot;value&quot;: { &quot;op&quot;: &quot;math.add&quot;, &quot;of&quot;: [&quot;$cups&quot;, 1] } }]
+      },
+      &quot;undo&quot;: {
+        &quot;when&quot;: { &quot;op&quot;: &quot;cmp.gt&quot;, &quot;left&quot;: &quot;$cups&quot;, &quot;right&quot;: 0 },
+        &quot;effects&quot;: [{ &quot;op&quot;: &quot;state.set&quot;, &quot;path&quot;: &quot;cups&quot;, &quot;value&quot;: { &quot;op&quot;: &quot;math.sub&quot;, &quot;left&quot;: &quot;$cups&quot;, &quot;right&quot;: 1 } }]
+      },
+      &quot;setGoal&quot;: {
+        &quot;params&quot;: { &quot;goal&quot;: { &quot;open&quot;: { &quot;op&quot;: &quot;type.int&quot;, &quot;min&quot;: 1, &quot;max&quot;: 30 } } },
+        &quot;effects&quot;: [{ &quot;op&quot;: &quot;state.set&quot;, &quot;path&quot;: &quot;goal&quot;, &quot;value&quot;: &quot;@goal&quot; }]
+      }
+    },
+    &quot;projections&quot;: {
+      &quot;cups&quot;: &quot;$cups&quot;,
+      &quot;left&quot;: { &quot;op&quot;: &quot;math.max&quot;, &quot;of&quot;: [0, { &quot;op&quot;: &quot;math.sub&quot;, &quot;left&quot;: &quot;$goal&quot;, &quot;right&quot;: &quot;$cups&quot; }] }
+    }
+  },
+  &quot;v&quot;: {
+    &quot;$schema&quot;: &quot;rulealize/view/v1&quot;,
+    &quot;title&quot;: &quot;Water today&quot;,
+    &quot;layout&quot;: [
+      { &quot;c&quot;: &quot;stats&quot;, &quot;items&quot;: [{ &quot;label&quot;: &quot;Cups&quot;, &quot;bind&quot;: &quot;cups&quot; }, { &quot;label&quot;: &quot;To the goal&quot;, &quot;bind&quot;: &quot;left&quot; }] },
+      { &quot;c&quot;: &quot;actions&quot;, &quot;inputs&quot;: [&quot;drink&quot;, &quot;undo&quot;] },
+      { &quot;c&quot;: &quot;actions&quot;, &quot;title&quot;: &quot;Goal&quot;, &quot;inputs&quot;: [&quot;setGoal&quot;] }
+    ],
+    &quot;names&quot;: {
+      &quot;inputs&quot;: { &quot;drink&quot;: &quot;Drank a cup&quot;, &quot;undo&quot;: &quot;Take one back&quot;, &quot;setGoal&quot;: &quot;Set&quot; },
+      &quot;params&quot;: { &quot;goal&quot;: &quot;Cups a day&quot; }
+    }
+  }
+}
+</code></pre>
 <h2 id="before-you-answer">Before you answer</h2>
 <ul class="contains-task-list">
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> The paneset, and the view and the theme when written, each have their <code>$schema</code>.</li>
-<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every operation is one a listed plugin has, with only the keys its specification gives.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The rule set has <code>id</code>, <code>version</code>, <code>state</code> and <code>inputs</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every operation and type was found in the Registry's list, with only the keys it gives there.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every plugin whose operation, <code>$</code>, <code>@</code> or <code>#</code> is used is in <code>requires</code>.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Lists where an expression goes are <code>seq.of</code>, not JSON arrays (arrays are fine in
 <code>state.initial</code>, <code>s</code> and a view).</li>

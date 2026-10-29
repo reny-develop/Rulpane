@@ -45,13 +45,9 @@ A value written as JSON runs to the end of its JSON, whatever `&`, `#` or `=` it
 
 ## Rule sets from the Registry
 
-`r=Rulealize.RuleSet.Request@1.1.0` names a rule set the Rulealize Registry indexes, with all three numbers of its version, so a link says which document it ran. The viewer never fetches anything outside its own origin, so every deploy copies them in first: [`tool/Mirror`](tool/Mirror/Program.cs) reads the Registry's catalogue, takes the documents out of each version's package on nuget.org, and writes them to `registry/` beside the viewer. A version the Registry withholds is not copied, and a link to it stops opening at the next deploy.
+`r=Rulealize.RuleSet.Request@1.1.0` names a rule set the Rulealize Registry indexes, with all three numbers of its version, so a link says which document it ran. The viewer reads it as the link is opened, each part from the place that publishes it: the Registry's own catalogue says which versions exist, and the document is taken out of that version's package on nuget.org, where its publisher put it. A version the Registry withholds is not opened, from the moment the Registry withholds it. Where each is read is [`Addresses`](src/Rulpane.Engine/Addresses.cs).
 
-What any rule set holds through `uses` is read from the same copy, however the rule set itself arrived — bundled, from the Registry, or in the link. A part its own package ships is taken from the package; anything else is the lowest version the Registry has that satisfies every `uses` naming it, as `RuleSetRequirement.Choose` decides, so a link resolves to the same documents however many versions are published after it. A rule set in a link can therefore carry only what it adds — `uses`, `held` and `projections` — and leave what it holds to the Registry.
-
-```sh
-dotnet run --project tool/Mirror -- src/Rulpane.Viewer/wwwroot/registry   # for a local run; the folder is ignored by git
-```
+What any rule set holds through `uses` is read the same way, however the rule set itself arrived — bundled, from the Registry, or in the link. A part its own package ships is taken from the package; anything else is the lowest version the Registry has that satisfies every `uses` naming it, as `RuleSetRequirement.Choose` decides, so a link resolves to the same documents however many versions are published after it. A rule set in a link can therefore carry only what it adds — `uses`, `held` and `projections` — and leave what it holds to the Registry.
 
 ## The screen
 
@@ -202,11 +198,7 @@ https://reny-develop.github.io/Rulpane/#r=Rulealize.RuleSet.Request@1.1.0&v=octo
 https://reny-develop.github.io/Rulpane/#p=octocat/othello@1&t=paper
 ```
 
-(`octocat/…` names show the form; they are not releases.) As with the Registry, the viewer fetches nothing from outside its own origin: every deploy copies the Gallery's releases out of a checkout of it to `gallery/` beside the viewer, leaving out any it withholds — and a paneset that names one of those stops opening with it.
-
-```sh
-dotnet run --project tool/Mirror -- --gallery src/Rulpane.Viewer/wwwroot/gallery [<gallery checkout>]   # ../Rulpane.Gallery by default; ignored by git
-```
+(`octocat/…` names show the form; they are not releases.) As with the Registry, the viewer reads a release from the Gallery's own site as the link is opened. The Gallery does not serve one it withholds, so that release stops opening as soon as it is withheld — and a paneset that names it stops opening with it.
 
 ## Themes
 
@@ -243,11 +235,11 @@ When the rules, the view or the theme came in the link rather than with the view
 A screen anybody can lay out could be made to pass for something else. What keeps a link to what Rulpane is for:
 
 - **No code from a link.** A link carries documents — rules, a view, a theme, a position — never HTML or script; a view's text is shown as text. The rules run on the plugins Rulpane lists itself (see [Plugins](#plugins)), never one a link names.
-- **Nothing from elsewhere.** The page's Content-Security-Policy lets it load and fetch only from its own origin: no outside script, image, font or request, and no form that submits anywhere. What comes from the Registry and the Gallery is copied beside the viewer at each deploy.
+- **Nothing from outside its own ecosystem.** The page's Content-Security-Policy lets it load script, style, images and fonts only from its own origin, and fetch only from there, from the Rulealize Registry and the Gallery (both at `reny-develop.github.io`), and from nuget.org, where the packages the Registry indexes are: no outside script, image, font or request, and no form that submits anywhere. A link names documents, never addresses, so where they are read is Rulpane's to decide, not the link's.
 - **No password fields, and a bar a link cannot draw.** The top bar always says who made the screen, and its detail says that Rulpane never asks for passwords, payment or personal details.
 - **A bounded amount of work.** The moves listed at a position and the outcomes of a draw are capped (`Session.ValidationLimit`, `Session.OutcomeLimit`), so rules written to hang the browser stop at the cap.
 
-A release in the Gallery that misleads can be reported there, with an issue, and is withheld: it stops opening at Rulpane's next deploy. A link that carries everything in itself cannot be withdrawn by anybody, which is why the bar says whose it is.
+A release in the Gallery that misleads can be reported there, with an issue, and is withheld: it stops opening as soon as the Gallery publishes its pages again. A link that carries everything in itself cannot be withdrawn by anybody, which is why the bar says whose it is.
 
 ## Language
 
@@ -265,19 +257,18 @@ It takes the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 dotnet run --project src/Rulpane.Viewer --launch-profile http   # http://localhost:5080
 ```
 
-To open rule sets from the Registry or releases from the Gallery locally, mirror them first with the two `tool/Mirror` commands shown under [Rule sets from the Registry](#rule-sets-from-the-registry) and [The Gallery](#the-gallery).
+A local run reads the Registry, nuget.org and the Gallery where they are published, as the site does. An `appsettings.json` in `wwwroot/` with `Registry`, `Feed` or `Gallery` keys, relative to the viewer's own address, points it at a copy instead — which is how the Gallery takes its pictures against releases it has not published yet.
 
 | Folder | What it is |
 | --- | --- |
 | [`src/Rulpane.Engine`](src/Rulpane.Engine/) | What runs a link, apart from how it is drawn: the curated runtime, the sources a fragment names, the readers of views, themes and panesets. The Gallery reads a submission with this same library, so what it records is what the viewer opens |
 | [`src/Rulpane.Viewer`](src/Rulpane.Viewer/) | The Blazor WebAssembly app around it. `wwwroot/` holds the bundled rule sets, views, themes and panesets |
-| [`tool/Mirror`](tool/Mirror/) | Copies the Registry's rule sets and the Gallery's releases beside the viewer |
 | [`tool/Guide`](tool/Guide/) | Writes [`doc/guide.md`](doc/guide.md) and [`doc/guide.ja.md`](doc/guide.ja.md), the short guide people see, one per language, and [`doc/guide.ai.md`](doc/guide.ai.md), the one for an AI that the page never shows, into `index.html` outside the app, and the AI's and the English one into `wwwroot/llms.txt`, after checking that every operation they name is one the runtime runs and that every bundled paneset opens and plays. The AI's lists the plugins, filled in from the runtime. Run it after editing either; `pages.yml` runs it with `--check` and publishes nothing if the guide is behind or an example is wrong |
 | [`tool/Minesweeper`](tool/Minesweeper/) | Writes the bundled `minesweeper` rule set, whose cell list, neighbour graph and mine order are too long to keep by hand: `node tool/Minesweeper/minesweeper.mjs src/Rulpane.Viewer/wwwroot/rulesets/minesweeper.json` |
 
-A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer, mirrors the Registry's rule sets and the Gallery beside it, and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
+A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
 
-A link stays openable across a breaking change to what a link holds: the commit before that change is tagged `site/v<n>`, and every deploy builds each such tag again, with the Registry and the Gallery mirrored again, at `/v<n>/` beside the current viewer at the root. There is no such tag yet.
+A link stays openable across a breaking change to what a link holds: the commit before that change is tagged `site/v<n>`, and every deploy builds each such tag again at `/v<n>/` beside the current viewer at the root. There is no such tag yet.
 
 Issues and pull requests are welcome. A view, a theme or a paneset of your own does not need one: [submit it to the Gallery](https://github.com/reny-develop/Rulpane.Gallery#how-a-release-is-recorded).
 

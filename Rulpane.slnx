@@ -5,6 +5,5 @@
   </Folder>
   <Folder Name="/tool/">
     <Project Path="tool/Guide/Rulpane.Guide.csproj" />
-    <Project Path="tool/Mirror/Rulpane.Mirror.csproj" />
   </Folder>
 </Solution>

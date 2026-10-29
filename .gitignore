@@ -483,9 +483,3 @@ $RECYCLE.BIN/
 
 # Design notes, kept locally and not published
 doc/concept.md
-
-# The Registry's rule sets, copied in by tool/Mirror (pages.yml runs it on every deploy)
-src/Rulpane.Viewer/wwwroot/registry/
-
-# The Gallery's releases, copied in by tool/Mirror --gallery (pages.yml runs it on every deploy)
-src/Rulpane.Viewer/wwwroot/gallery/

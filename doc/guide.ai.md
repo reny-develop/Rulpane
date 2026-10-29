@@ -15,32 +15,93 @@ carries a **paneset**: one JSON document holding
 ## What to do
 
 1. Work out what can be done in the system, by whom, and when it is finished.
-2. Start from a whole example and change it. Each start-page sample is a rule set and a view that
-   open as they are:
-   [rules](https://reny-develop.github.io/Rulpane/rulesets/split-bill.json) and
-   [view](https://raw.githubusercontent.com/reny-develop/Rulpane.Gallery/main/release/reny-develop/split-bill-view/1/document.json)
-   of a split bill, and the same for `packing-list` and `scoreboard` (the view's file is under
-   `release/reny-develop/<name>-view/1/`). Write them into the paneset as `r` and `v`.
-3. Look up every operation before using it. The
-   [Rulealize Registry](https://reny-develop.github.io/Rulealize.Registry/) has a page for each,
-   such as `https://reny-develop.github.io/Rulealize.Registry/op/seq.where.html`, which leads to
-   its plugin's specification: that gives every key it takes. How a rule set is laid out is in
-   the [quick guide](https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md).
-   Use only the plugins listed at the end of this page.
-4. The view's blocks and keys are in [Rulpane's README](https://github.com/reny-develop/Rulpane#views).
-5. Give the person the link: `https://reny-develop.github.io/Rulpane/#p=` followed by the paneset
+2. Read before you write. **Write no operation, type or key from memory**: a name that is not in
+   what you read is refused, and the link does not open. Open these, in this order:
+   1. How a rule set is laid out, in Rulealize's quick guide:
+      <https://raw.githubusercontent.com/reny-develop/Rulealize/main/doc/ruleset-quickguide.md>.
+      It names every top-level key; `inputs`, the things that may be done, is required.
+   2. What the Rulpane Gallery publishes: <https://reny-develop.github.io/Rulpane.Gallery/llms.txt>.
+      Take the paneset closest to the request and change it, rather than starting from nothing.
+   3. Every operation and the keys it takes, in the Rulealize Registry:
+      <https://reny-develop.github.io/Rulealize.Registry/llms.txt>. Look up each operation you
+      write there. Use only the plugins listed at the end of this page.
+   4. The view's blocks and keys, in Rulpane's README:
+      <https://raw.githubusercontent.com/reny-develop/Rulpane/main/README.md>, under "Views".
+3. When nothing in the Gallery is close, start from the whole paneset below.
+4. Give the person the link: `https://reny-develop.github.io/Rulpane/#p=` followed by the paneset
    as JSON on one line, with every space written as `%20`, inside strings too — a chat cuts a link
    at the first space. Nothing else needs encoding.
-6. Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
+5. Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
    at <https://reny-develop.github.io/Rulpane/#make>, press "Make link" and tell me the reason it
    shows. The reason names the key that is wrong.
-7. When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
+6. When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
    holding it can take any step, and two people working from one link make two separate histories.
+
+## A whole paneset
+
+Cups of water drunk today, against a goal that can be changed. It opens as it is.
+
+```json paneset
+{
+  "$schema": "rulpane/paneset/v1",
+  "r": {
+    "$schema": "rulealize/ruleset/v1",
+    "id": "water",
+    "version": "1.0.0",
+    "requires": [
+      { "plugin": "Rulealize.Plugin.TypeSchema", "version": "^1.3" },
+      { "plugin": "Rulealize.Plugin.State", "version": "^1.0" },
+      { "plugin": "Rulealize.Plugin.Arithmetic", "version": "^1.2" },
+      { "plugin": "Rulealize.Plugin.Comparison", "version": "^1.0" },
+      { "plugin": "Rulealize.Plugin.Binding", "version": "^1.0" }
+    ],
+    "state": {
+      "schema": {
+        "cups": { "op": "type.int", "min": 0, "max": 30 },
+        "goal": { "op": "type.int", "min": 1, "max": 30 }
+      },
+      "initial": { "cups": 0, "goal": 8 }
+    },
+    "inputs": {
+      "drink": {
+        "when": { "op": "cmp.lt", "left": "$cups", "right": 30 },
+        "effects": [{ "op": "state.set", "path": "cups", "value": { "op": "math.add", "of": ["$cups", 1] } }]
+      },
+      "undo": {
+        "when": { "op": "cmp.gt", "left": "$cups", "right": 0 },
+        "effects": [{ "op": "state.set", "path": "cups", "value": { "op": "math.sub", "left": "$cups", "right": 1 } }]
+      },
+      "setGoal": {
+        "params": { "goal": { "open": { "op": "type.int", "min": 1, "max": 30 } } },
+        "effects": [{ "op": "state.set", "path": "goal", "value": "@goal" }]
+      }
+    },
+    "projections": {
+      "cups": "$cups",
+      "left": { "op": "math.max", "of": [0, { "op": "math.sub", "left": "$goal", "right": "$cups" }] }
+    }
+  },
+  "v": {
+    "$schema": "rulealize/view/v1",
+    "title": "Water today",
+    "layout": [
+      { "c": "stats", "items": [{ "label": "Cups", "bind": "cups" }, { "label": "To the goal", "bind": "left" }] },
+      { "c": "actions", "inputs": ["drink", "undo"] },
+      { "c": "actions", "title": "Goal", "inputs": ["setGoal"] }
+    ],
+    "names": {
+      "inputs": { "drink": "Drank a cup", "undo": "Take one back", "setGoal": "Set" },
+      "params": { "goal": "Cups a day" }
+    }
+  }
+}
+```
 
 ## Before you answer
 
 - [ ] The paneset, and the view and the theme when written, each have their `$schema`.
-- [ ] Every operation is one a listed plugin has, with only the keys its specification gives.
+- [ ] The rule set has `id`, `version`, `state` and `inputs`.
+- [ ] Every operation and type was found in the Registry's list, with only the keys it gives there.
 - [ ] Every plugin whose operation, `$`, `@` or `#` is used is in `requires`.
 - [ ] Lists where an expression goes are `seq.of`, not JSON arrays (arrays are fine in
       `state.initial`, `s` and a view).

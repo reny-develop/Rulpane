@@ -18,15 +18,12 @@ public sealed record Published(string Id, string Version, string Kind, string Re
 }
 
 /// <summary>
-/// What the Gallery (Rulpane.Gallery) publishes, as <c>tool/Mirror --gallery</c> copied it beside
-/// the viewer: like the Registry's rule sets, nothing is fetched from anywhere but the page's own
-/// origin. A name is one thing — a view, a theme or a paneset — so a name given where another
-/// kind is wanted is refused rather than read as something it is not.
+/// What the Gallery (Rulpane.Gallery) publishes, read from its own site as a link is opened, where
+/// a withheld release is not served. A name is one thing — a view, a theme or a paneset — so a
+/// name given where another kind is wanted is refused rather than read as something it is not.
 /// </summary>
 public static class Gallery
 {
-    public const string Folder = "gallery";
-
     private static readonly Dictionary<(string, string), Published> releases = [];
 
     /// <summary>The release <paramref name="id"/>@<paramref name="version"/>, which has to be a <paramref name="kind"/>.</summary>
@@ -37,7 +34,7 @@ public static class Gallery
             string text;
             try
             {
-                text = await http.GetStringAsync($"{Folder}/{id}/{version}.json");
+                text = await http.GetStringAsync(new Uri(Addresses.Gallery, $"release/{id}/{version}.json"));
             }
             catch (HttpRequestException e)
             {

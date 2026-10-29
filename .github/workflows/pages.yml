@@ -34,21 +34,12 @@ jobs:
 
       - run: dotnet publish src/Rulpane.Viewer -c Release -o publish
 
-      # The Registry's rule sets, copied from nuget.org to beside the viewer, for r=<id>@<version>
-      # and for any rules whose uses name them: the page can fetch nothing but its own origin.
-      # Run on every deploy, so a version the Registry withholds stops opening at the next one.
-      - name: Mirror the Registry's rule sets
-        run: dotnet run --project tool/Mirror -c Release -- publish/wwwroot/registry
-
-      # The Gallery's releases, for a view, a theme or a paneset named <owner>/<name>@<version>.
-      # The Gallery keeps its own copy of each in git, so this reads a checkout of it.
+      # The Gallery's releases, for a tag built below from before the viewer read them from the
+      # Gallery's own site. The Gallery keeps its own copy of each in git, so this reads a checkout of it.
       - uses: actions/checkout@v4
         with:
           repository: reny-develop/Rulpane.Gallery
           path: gallery
-
-      - name: Mirror the Gallery
-        run: dotnet run --project tool/Mirror -c Release -- --gallery publish/wwwroot/gallery gallery
 
       # A project site is served under /<repository>/, and the viewer resolves everything —
       # its framework files and the bundled rule sets — against <base>.
@@ -60,7 +51,9 @@ jobs:
 
       # A link made before a breaking change to what a link holds keeps opening at /<repository>/v<n>/:
       # the commit before that change is tagged site/v<n>, and every deploy builds each such tag
-      # again, with the mirrors taken again, so a version withheld since stops opening there too.
+      # again. A tag from before the viewer read the Registry, the feed and the Gallery as a link
+      # is opened copies them beside itself with its own tool/Mirror, taken again each time, so a
+      # version withheld since stops opening there too.
       - name: Build the versions kept at their own path
         run: |
           base="/${GITHUB_REPOSITORY#*/}"
@@ -68,8 +61,10 @@ jobs:
             n="${tag#site/}"
             git worktree add "work/$n" "$tag"
             dotnet publish "work/$n/src/Rulpane.Viewer" -c Release -o "work/$n-publish"
-            dotnet run --project "work/$n/tool/Mirror" -c Release -- "work/$n-publish/wwwroot/registry"
-            dotnet run --project "work/$n/tool/Mirror" -c Release -- --gallery "work/$n-publish/wwwroot/gallery" gallery
+            if [ -d "work/$n/tool/Mirror" ]; then
+              dotnet run --project "work/$n/tool/Mirror" -c Release -- "work/$n-publish/wwwroot/registry"
+              dotnet run --project "work/$n/tool/Mirror" -c Release -- --gallery "work/$n-publish/wwwroot/gallery" gallery
+            fi
             sed -i "s|<base href=\"/\" />|<base href=\"${base}/${n}/\" />|" "work/$n-publish/wwwroot/index.html"
             mv "work/$n-publish/wwwroot" "publish/wwwroot/$n"
           done
