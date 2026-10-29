@@ -36,8 +36,9 @@ the view for it; otherwise write the rules in place.
       <https://raw.githubusercontent.com/reny-develop/Rulpane/main/README.md>, under "Views".
 3. When nothing in the Gallery is close, start from the whole paneset below.
 4. Give the person the link: `https://reny-develop.github.io/Rulpane/#p=` followed by the paneset
-   as JSON on one line, with every space written as `%20`, inside strings too — a chat cuts a link
-   at the first space. Nothing else needs encoding.
+   as JSON on one line, percent-encoded whole as `encodeURIComponent` would: `{` as `%7B`, `"` as
+   `%22`, a space as `%20`, and so on, so the link starts `#p=%7B%22%24schema%22`. A chat cuts a
+   link at the first `{`, `"` or space it holds, and what is left opens nothing.
 5. Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
    at <https://reny-develop.github.io/Rulpane/#make>, press "Make link" and tell me the reason it
    shows. The reason names the key that is wrong.
@@ -115,7 +116,7 @@ Cups of water drunk today, against a goal that can be changed. It opens as it is
       `state.initial`, `s` and a view).
 - [ ] No open parameter is read in `when`, `actor` or a `domain`; every `validate` clause reads one.
 - [ ] Every view binding names a projection the rules have, or a state field as `$name`.
-- [ ] The link is one line, and every space in it is `%20`.
+- [ ] The link is one line, and after `#p=` holds no `{`, `"` or space: it starts `#p=%7B%22`.
 
 ## The plugins Rulpane runs
 

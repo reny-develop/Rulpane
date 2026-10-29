@@ -63,8 +63,9 @@ write there. Use only the plugins listed at the end of this page.</li>
 </li>
 <li>When nothing in the Gallery is close, start from the whole paneset below.</li>
 <li>Give the person the link: <code>https://reny-develop.github.io/Rulpane/#p=</code> followed by the paneset
-as JSON on one line, with every space written as <code>%20</code>, inside strings too — a chat cuts a link
-at the first space. Nothing else needs encoding.</li>
+as JSON on one line, percent-encoded whole as <code>encodeURIComponent</code> would: <code>{</code> as <code>%7B</code>, <code>&quot;</code> as
+<code>%22</code>, a space as <code>%20</code>, and so on, so the link starts <code>#p=%7B%22%24schema%22</code>. A chat cuts a
+link at the first <code>{</code>, <code>&quot;</code> or space it holds, and what is left opens nothing.</li>
 <li>Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
 at <a href="https://reny-develop.github.io/Rulpane/#make">https://reny-develop.github.io/Rulpane/#make</a>, press &quot;Make link&quot; and tell me the reason it
 shows. The reason names the key that is wrong.</li>
@@ -138,7 +139,7 @@ publishes that does what was asked, and a <code>v</code> is written for it.</li>
 <code>state.initial</code>, <code>s</code> and a view).</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> No open parameter is read in <code>when</code>, <code>actor</code> or a <code>domain</code>; every <code>validate</code> clause reads one.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every view binding names a projection the rules have, or a state field as <code>$name</code>.</li>
-<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The link is one line, and every space in it is <code>%20</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The link is one line, and after <code>#p=</code> holds no <code>{</code>, <code>&quot;</code> or space: it starts <code>#p=%7B%22</code>.</li>
 </ul>
 <h2 id="the-plugins-rulpane-runs">The plugins Rulpane runs</h2>
 <p>A rule set can use only these. Write each one used into <code>requires</code> as shown.</p>
