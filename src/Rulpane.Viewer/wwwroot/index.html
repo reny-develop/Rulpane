@@ -31,12 +31,18 @@
 carries a <strong>paneset</strong>: one JSON document holding</p>
 <ul>
 <li><code>&quot;$schema&quot;: &quot;rulpane/paneset/v1&quot;</code> — required;</li>
-<li><code>r</code>, the rules: a <a href="https://github.com/reny-develop/Rulealize">Rulealize</a> rule set, written in place — required;</li>
+<li><code>r</code>, the rules: a <a href="https://github.com/reny-develop/Rulealize">Rulealize</a> rule set — required;</li>
 <li><code>v</code>, the view: what the screen shows and where, with <code>&quot;$schema&quot;: &quot;rulealize/view/v1&quot;</code> — optional; without it the screen is made from the rules;</li>
 <li><code>t</code>, the theme, with <code>&quot;$schema&quot;: &quot;rulealize/theme/v1&quot;</code> — optional;</li>
 <li><code>s</code>, the state's <code>data</code> to start from — optional; the rules' own <code>state.initial</code> without it;</li>
 <li><code>b</code>, which of the rules' names the view reads under other names — optional.</li>
 </ul>
+<p>Each of <code>r</code>, <code>v</code> and <code>t</code> is either the document written in place or a name: <code>&lt;id&gt;@&lt;version&gt;</code> for a
+rule set the Registry publishes, <code>&lt;owner&gt;/&lt;name&gt;@&lt;version&gt;</code> for what the Gallery publishes. A name
+is the thing as its publisher wrote it, in their words. <code>&quot;r&quot;: &quot;Rulealize.RuleSet.Request@1.1.0&quot;</code>
+with no <code>v</code> opens a screen made from those rules, with their own names on the buttons — not one
+made for the request. Name a rule set only when it already does what was asked, and then write
+the view for it; otherwise write the rules in place.</p>
 <h2 id="what-to-do">What to do</h2>
 <ol>
 <li>Work out what can be done in the system, by whom, and when it is finished.</li>
@@ -124,7 +130,8 @@ holding it can take any step, and two people working from one link make two sepa
 <h2 id="before-you-answer">Before you answer</h2>
 <ul class="contains-task-list">
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> The paneset, and the view and the theme when written, each have their <code>$schema</code>.</li>
-<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The rule set has <code>id</code>, <code>version</code>, <code>state</code> and <code>inputs</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The rule set has <code>id</code>, <code>version</code>, <code>state</code> and <code>inputs</code> — or <code>r</code> names one the Registry
+publishes that does what was asked, and a <code>v</code> is written for it.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every operation and type was found in the Registry's list, with only the keys it gives there.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every plugin whose operation, <code>$</code>, <code>@</code> or <code>#</code> is used is in <code>requires</code>.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Lists where an expression goes are <code>seq.of</code>, not JSON arrays (arrays are fine in

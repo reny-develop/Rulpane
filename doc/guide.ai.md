@@ -6,11 +6,18 @@ Rulpane (<https://reny-develop.github.io/Rulpane/>) opens a working screen from 
 carries a **paneset**: one JSON document holding
 
 - `"$schema": "rulpane/paneset/v1"` — required;
-- `r`, the rules: a [Rulealize](https://github.com/reny-develop/Rulealize) rule set, written in place — required;
+- `r`, the rules: a [Rulealize](https://github.com/reny-develop/Rulealize) rule set — required;
 - `v`, the view: what the screen shows and where, with `"$schema": "rulealize/view/v1"` — optional; without it the screen is made from the rules;
 - `t`, the theme, with `"$schema": "rulealize/theme/v1"` — optional;
 - `s`, the state's `data` to start from — optional; the rules' own `state.initial` without it;
 - `b`, which of the rules' names the view reads under other names — optional.
+
+Each of `r`, `v` and `t` is either the document written in place or a name: `<id>@<version>` for a
+rule set the Registry publishes, `<owner>/<name>@<version>` for what the Gallery publishes. A name
+is the thing as its publisher wrote it, in their words. `"r": "Rulealize.RuleSet.Request@1.1.0"`
+with no `v` opens a screen made from those rules, with their own names on the buttons — not one
+made for the request. Name a rule set only when it already does what was asked, and then write
+the view for it; otherwise write the rules in place.
 
 ## What to do
 
@@ -100,7 +107,8 @@ Cups of water drunk today, against a goal that can be changed. It opens as it is
 ## Before you answer
 
 - [ ] The paneset, and the view and the theme when written, each have their `$schema`.
-- [ ] The rule set has `id`, `version`, `state` and `inputs`.
+- [ ] The rule set has `id`, `version`, `state` and `inputs` — or `r` names one the Registry
+      publishes that does what was asked, and a `v` is written for it.
 - [ ] Every operation and type was found in the Registry's list, with only the keys it gives there.
 - [ ] Every plugin whose operation, `$`, `@` or `#` is used is in `requires`.
 - [ ] Lists where an expression goes are `seq.of`, not JSON arrays (arrays are fine in
