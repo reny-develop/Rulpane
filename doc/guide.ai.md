@@ -1,4 +1,4 @@
-# For an AI asked to make a Rulpane link
+# For an AI asked for the JSON Rulpane opens
 
 People see a short guide on the page; this part is for an AI reading the page as text.
 

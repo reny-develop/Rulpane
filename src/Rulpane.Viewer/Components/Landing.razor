@@ -26,7 +26,7 @@
             <div class="make-row">
                 <button class="primary" @onclick="CopyPrompt"><Icon Name="@(promptCopied ? "check" : "copy")" />@(promptCopied ? Say("Copied", "コピーしました") : Say("Copy the request", "依頼文をコピー"))</button>
             </div>
-            <p class="note"><Icon Name="back" Size="14" />@Say("Paste it into any AI that can read web pages. If the link it gives does not open, give it the reason the page shows.", "Web ページを読める AI に貼り付けてください。もらったリンクが開かなければ、画面に出た理由を AI に伝えてください。")</p>
+            <p class="note"><Icon Name="back" Size="14" />@Say("Paste it into any AI that can read web pages. Paste the JSON it gives into “Make a link from JSON” below, and it becomes a link. If it does not open, give the AI the reason shown.", "Web ページを読める AI に貼り付けてください。もらった JSON を下の「JSON からリンクを作る」に貼ると、リンクになります。開けないときは、出た理由を AI に伝えてください。")</p>
         </div>
     </section>
 
@@ -111,8 +111,8 @@
     private bool linkCopied;
 
     private string Prompt => Say(
-        $"Read {BaseUri} and make me a Rulpane link for: {(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}",
-        $"{BaseUri} を読んで、次のものを Rulpane のリンクにしてください：{(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}");
+        $"Read {BaseUri} and write me the JSON Rulpane opens for: {(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}",
+        $"{BaseUri} を読んで、次のものを Rulpane で開ける JSON にしてください：{(string.IsNullOrWhiteSpace(need) ? "…" : need.Trim())}");
 
     private static string Placeholder => """
         {
