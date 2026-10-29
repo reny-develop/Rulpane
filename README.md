@@ -7,13 +7,13 @@
 ## Make one
 
 - **Ask an AI.** Give an AI that can read web pages the site's address and say what you need — "Read https://reny-develop.github.io/Rulpane/ and make me a Rulpane link for a compound growth simulator for monthly investing." The start page builds that request for you. The page carries [how to write one](doc/guide.md) ([日本語](doc/guide.ja.md)) as plain HTML, readable without running it, with [a longer part for an AI](doc/guide.ai.md) that the page does not show; both, in English, are at [`llms.txt`](https://reny-develop.github.io/Rulpane/llms.txt). It is short on purpose: it points to the [Registry](https://reny-develop.github.io/Rulealize.Registry/) for the operations rules can use and to the [Gallery](https://reny-develop.github.io/Rulpane.Gallery/) for views, themes and panesets; a whole paneset to copy is any sample's "Edit a copy".
-- **Start from one that exists.** The start page's samples — `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper`, `chess` — open as they are, or go into the editor as a copy with their rules and view written out. Each is bundled twice, the name with `-ja` on it being the same screen with its view in Japanese, and the start page offers the ones in its own language.
+- **Start from one that exists.** The start page's samples — `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper`, `chess` — open as they are, or go into the editor as a copy with their rules and view written out. Each is published to the [Gallery](#the-gallery) twice, as `reny-develop/split-bill@1` and so on, the name with `-ja` on it being the same screen with its view in Japanese, and the start page offers the ones in its own language.
 - **Write it.** The editor on the start page takes one paneset, or a link, checks it the way a link is opened, and hands out the link.
 
 | Link | What it shows |
 | --- | --- |
-| [`#p=split-bill`](https://reny-develop.github.io/Rulpane/#p=split-bill) | A bundled paneset: rules, view and where to start, named at once |
-| [`#p=split-bill&t=paper`](https://reny-develop.github.io/Rulpane/#p=split-bill&t=paper) | The paneset with one of its keys given over |
+| [`#p=reny-develop/split-bill@1`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@1) | A paneset from the Gallery: rules, view and where to start, named at once |
+| [`#p=reny-develop/split-bill@1&t=paper`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@1&t=paper) | The paneset with one of its keys given over |
 | [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | The same rules with no view: the screen is made from the rules |
 | [`#r=approval&s=z:q1Yq…`](https://reny-develop.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE) | The same rules, starting from a position the link carries |
 | [`#p={"$schema":"rulpane/paneset/v1","r":"checklist",…}`](https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":{"all":"$steps","done":"$done"},"s":{"steps":["keys","badge","laptop"],"done":[]}}) | A paneset written into the link as plain JSON, as an AI writes one |
@@ -39,7 +39,7 @@ Everything goes in the fragment (after `#`), which the browser never sends to a 
 | `t` | The theme: how the screen under the bar looks. A bundled name (`wwwroot/themes/<name>.json`), one from the Gallery, `{…}` or `z:`. Omitted, the screen looks like Rulpane |
 | `s` | The state: only the `data` of the state document, as `{…}` or `z:`. Omitted, the rule set starts from its initial state |
 | `b` | Where the rules keep what the view reads, when they call it something else: see [Bindings](#bindings). `{…}` or `z:` |
-| `p` | A [paneset](#panesets): all of the above as one document. A bundled name (`wwwroot/panesets/<name>.json`), one from the Gallery, `{…}` or `z:`. Any other key the link gives goes over the paneset's own |
+| `p` | A [paneset](#panesets): all of the above as one document. A bundled name (`wwwroot/panesets/<name>.json`; none is bundled now), one from the Gallery, `{…}` or `z:`. Any other key the link gives goes over the paneset's own |
 
 A value written as JSON runs to the end of its JSON, whatever `&`, `#` or `=` its strings hold, so it can be typed — by a person or an AI — with nothing encoded but the spaces (`%20`, since a chat cuts a link at a space). Rulpane packs it into the `z:` form, and the URL is rewritten on every move, so the browser's Back button is an undo, and sharing the URL hands over the position as it stands.
 
@@ -189,9 +189,9 @@ A paneset (`rulpane/paneset/v1`) is a screen as one document, to be named by a l
 }
 ```
 
-A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":…,"s":…}` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=scoreboard&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
+A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":…,"s":…}` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=reny-develop/scoreboard@1&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
 
-The bundled panesets are the start page's samples, each in English and with `-ja` in Japanese: `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper` and `chess`. Each is something to use as it is, with a rule set and a view of its own name.
+The start page's samples are panesets in the Gallery, each in English and with `-ja` in Japanese: `reny-develop/split-bill@1`, `packing-list`, `scoreboard`, `reversi`, `minesweeper` and `chess`, the same way. Each is something to use as it is, with a bundled rule set of its own name and a view named for it with `-view` (`reny-develop/split-bill-view@1`). They are kept in [Rulpane.Panes](https://github.com/reny-develop/Rulpane.Panes) and submitted like anybody's.
 
 ## The Gallery
 

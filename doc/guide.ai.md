@@ -18,8 +18,9 @@ carries a **paneset**: one JSON document holding
 2. Start from a whole example and change it. Each start-page sample is a rule set and a view that
    open as they are:
    [rules](https://reny-develop.github.io/Rulpane/rulesets/split-bill.json) and
-   [view](https://reny-develop.github.io/Rulpane/views/split-bill.json) of a split bill, and the
-   same for `packing-list` and `scoreboard`. Write them into the paneset as `r` and `v`.
+   [view](https://raw.githubusercontent.com/reny-develop/Rulpane.Gallery/main/release/reny-develop/split-bill-view/1/document.json)
+   of a split bill, and the same for `packing-list` and `scoreboard` (the view's file is under
+   `release/reny-develop/<name>-view/1/`). Write them into the paneset as `r` and `v`.
 3. Look up every operation before using it. The
    [Rulealize Registry](https://reny-develop.github.io/Rulealize.Registry/) has a page for each,
    such as `https://reny-develop.github.io/Rulealize.Registry/op/seq.where.html`, which leads to

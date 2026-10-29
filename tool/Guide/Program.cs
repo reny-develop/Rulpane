@@ -2,7 +2,7 @@
 // holds what it points at to what the viewer runs.
 //
 //   dotnet run --project tool/Guide              write llms.txt and the guide in index.html
-//   dotnet run --project tool/Guide -- --check   fail if either is behind doc/guide*.md, or a sample does not open
+//   dotnet run --project tool/Guide -- --check   fail if either is behind doc/guide*.md, or an example does not open
 //
 // doc/guide.md and doc/guide.ja.md are the short guide people see, one per language the start page
 // speaks; doc/guide.ai.md is the longer one for an AI, which the page never shows. All three go out as
@@ -15,9 +15,10 @@
 // AI's lists the plugins, filled in from the runtime. What they hold is checked against the code that
 // will run it:
 //   - every operation a guide writes as "op": "…" is one the runtime registers;
-//   - every bundled paneset, the start page's samples, opens as a link would, and plays from its
-//     start — the first move each time, up to 24, every position checked against the view;
-//   - every example under ```json paneset in the guide does the same, and every link under ```text link opens.
+//   - every example under ```json paneset in the guide opens as a link would, and plays from its
+//     start — the first move each time, up to 24, every position checked against the view — and
+//     every link under ```text link opens. The start page's samples are the Gallery's, which holds
+//     them to the same when they are submitted and every week after.
 
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -56,12 +57,6 @@ foreach (var (_, file, text) in guides)
 using var http = new HttpClient(new Files(wwwroot)) { BaseAddress = new Uri("http://guide/") };
 var opener = new Opener(http, runtime);
 int examples = 0;
-
-foreach (string path in Directory.EnumerateFiles(Path.Combine(wwwroot, "panesets"), "*.json").Order(StringComparer.Ordinal))
-{
-    examples++;
-    await Try($"wwwroot/panesets/{Path.GetFileName(path)}", "text link", $"#p={Path.GetFileNameWithoutExtension(path)}");
-}
 
 foreach (var (_, file, text) in guides)
 {

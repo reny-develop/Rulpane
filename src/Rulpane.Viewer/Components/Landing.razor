@@ -76,8 +76,8 @@
 @code {
     private sealed record Start(string Name, string Title, string Description);
 
-    // Each is the paneset of the same name in wwwroot/panesets, with -ja on it for a page in
-    // Japanese: a view is written in one language, so each sample is bundled once in each.
+    // Each is the Gallery's paneset of that name, with -ja on it for a page in Japanese: a view is
+    // written in one language, so each sample is published once in each (from Rulpane.Panes).
     private static readonly Start[] Starts =
     [
         new(Named("split-bill"), Say("Split the bill", "割り勘"), Say("Record who paid for what, and see what each one pays or gets back.", "立て替えた人と金額を記録すると、1 人ずつの払う額・受け取る額が出ます。")),
@@ -88,7 +88,7 @@
         new(Named("chess"), Say("Chess", "チェス"), Say("Castling, en passant and promotion included. Pick a piece to see where it can go.", "キャスリング、アンパッサン、昇格まで。駒を選ぶと動けるマスが出ます。")),
     ];
 
-    private static string Named(string name) => Language.Code == "ja" ? $"{name}-ja" : name;
+    private static string Named(string name) => $"reny-develop/{name}{(Language.Code == "ja" ? "-ja" : "")}@1";
 
     private static readonly JsonDocumentOptions Lenient = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
@@ -163,12 +163,12 @@
     {
         problem = null;
         link = null;
-        JsonObject paneset = JsonNode.Parse(await Http.GetStringAsync($"panesets/{name}.json"), documentOptions: Lenient)!.AsObject();
-        foreach (var (key, folder) in new[] { ("r", "rulesets"), ("v", "views"), ("t", "themes") })
+        JsonObject paneset = JsonNode.Parse(await Source.Paneset(name).ReadAsync(Http), documentOptions: Lenient)!.AsObject();
+        foreach (var (key, source) in new (string, Func<string, Source>)[] { ("r", Source.Rules), ("v", Source.View), ("t", Source.Theme) })
         {
-            if (paneset[key] is JsonValue named && named.TryGetValue(out string? bundled) && System.Text.RegularExpressions.Regex.IsMatch(bundled, "^[a-z0-9][a-z0-9-]*$"))
+            if (paneset[key] is JsonValue named && named.TryGetValue(out string? value) && !value.StartsWith('{') && !value.StartsWith(Fragment.PackedPrefix, StringComparison.Ordinal))
             {
-                paneset[key] = JsonNode.Parse(await Http.GetStringAsync($"{folder}/{bundled}.json"), documentOptions: Lenient);
+                paneset[key] = JsonNode.Parse(await source(value).ReadAsync(Http), documentOptions: Lenient);
             }
         }
 
