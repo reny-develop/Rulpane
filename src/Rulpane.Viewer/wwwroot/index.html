@@ -67,13 +67,13 @@ shown, and <code>names</code> for every input and parameter. Without it the scre
 keys, such as <code>setMonthly</code> and <code>futureValue</code>, and a person cannot tell what they are. Round
 every number a person reads with <code>math.round</code> in the projection: <code>math.div</code> and <code>math.pow</code>
 give a number such as 12331010.055470388734304367250.</li>
-<li>Give the person the link: <code>https://reny-develop.github.io/Rulpane/#p=</code> followed by the paneset
-as JSON on one line, percent-encoded whole as <code>encodeURIComponent</code> would: <code>{</code> as <code>%7B</code>, <code>&quot;</code> as
-<code>%22</code>, a space as <code>%20</code>, and so on, so the link starts <code>#p=%7B%22%24schema%22</code>. A chat cuts a
-link at the first <code>{</code>, <code>&quot;</code> or space it holds, and what is left opens nothing.</li>
-<li>Give the JSON itself too, in a code block, and say: if the link does not open, paste the JSON
-at <a href="https://reny-develop.github.io/Rulpane/#make">https://reny-develop.github.io/Rulpane/#make</a>, press &quot;Make link&quot; and tell me the reason it
-shows. The reason names the key that is wrong.</li>
+<li>Give the person the paneset as JSON in a code block, and say: copy it, paste it at
+<a href="https://reny-develop.github.io/Rulpane/#make">https://reny-develop.github.io/Rulpane/#make</a> and press &quot;Make link&quot;; if it shows a reason
+instead, tell me the reason. The reason names the key that is wrong.</li>
+<li>Give a link as well only when you can run code: <code>https://reny-develop.github.io/Rulpane/#p=</code>
+followed by <code>encodeURIComponent</code> of the JSON on one line. <strong>Never encode it by hand.</strong> A link
+encoded by hand drops or adds a bracket somewhere in thousands of characters and does not open,
+and a link with a bare <code>{</code>, <code>&quot;</code> or space is cut there by the chat.</li>
 <li>When the request needs it, say plainly what a link cannot do: it keeps no secrets, anybody
 holding it can take any step, and two people working from one link make two separate histories.</li>
 </ol>
@@ -145,7 +145,7 @@ publishes that does what was asked, and a <code>v</code> is written for it.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> No open parameter is read in <code>when</code>, <code>actor</code> or a <code>domain</code>; every <code>validate</code> clause reads one.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> <code>v</code> is written, in the person's language, and every number shown is rounded.</li>
 <li class="task-list-item"><input disabled="disabled" type="checkbox" /> Every view binding names a projection the rules have, or a state field as <code>$name</code>.</li>
-<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The link is one line, and after <code>#p=</code> holds no <code>{</code>, <code>&quot;</code> or space: it starts <code>#p=%7B%22</code>.</li>
+<li class="task-list-item"><input disabled="disabled" type="checkbox" /> The JSON is in a code block, with where to paste it. A link, if any, was made by running <code>encodeURIComponent</code>.</li>
 </ul>
 <h2 id="the-plugins-rulpane-runs">The plugins Rulpane runs</h2>
 <p>A rule set can use only these. Write each one used into <code>requires</code> as shown.</p>
