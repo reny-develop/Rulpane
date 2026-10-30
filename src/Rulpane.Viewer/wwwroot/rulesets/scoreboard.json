@@ -1,7 +1,7 @@
 {
   "$schema": "rulealize/ruleset/v1",
   "id": "scoreboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
 
   // Points for each player, round after round, and who is ahead. Whatever the game — bowling,
   // golf, cards, a quiz — the scorer adds the players and enters each score as it comes.
@@ -90,6 +90,28 @@
           "op": "state.set", "path": "scores",
           "value": { "op": "seq.concat", "of": ["$scores", { "op": "seq.of", "of": [{ "player": "@player", "points": "@points" }] }] }
         }
+      ]
+    },
+    // A player taken off the list goes with their scores.
+    "leave": {
+      "params": { "name": { "domain": "$players" } },
+      "effects": [
+        { "op": "state.set", "path": "players", "value": { "op": "seq.where", "source": "$players", "as": "n", "predicate": { "op": "cmp.ne", "left": "@n", "right": "@name" } } },
+        {
+          "op": "state.set", "path": "scores",
+          "value": { "op": "seq.where", "source": "$scores", "as": "s", "predicate": { "op": "cmp.ne", "left": { "op": "rec.at", "record": "@s", "key": "player" }, "right": "@name" } }
+        }
+      ]
+    },
+    // Every player and every score, for the next game or to start from a sample with your own.
+    "clear": {
+      "when": { "op": "logic.or", "any": [
+        { "op": "cmp.gt", "left": { "op": "seq.count", "source": "$players" }, "right": 0 },
+        { "op": "cmp.gt", "left": { "op": "seq.count", "source": "$scores" }, "right": 0 }
+      ] },
+      "effects": [
+        { "op": "state.set", "path": "players", "value": { "op": "seq.of", "of": [] } },
+        { "op": "state.set", "path": "scores", "value": { "op": "seq.of", "of": [] } }
       ]
     },
     // A score entered wrong is taken back from the end.

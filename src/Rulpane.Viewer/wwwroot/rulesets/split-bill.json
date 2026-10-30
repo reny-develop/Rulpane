@@ -1,7 +1,7 @@
 {
   "$schema": "rulealize/ruleset/v1",
   "id": "split-bill",
-  "version": "1.0.0",
+  "version": "1.1.0",
 
   // Who paid for what on a trip or a night out, and what each owes or is owed when it is
   // shared equally. Amounts are whole units of the currency; the share is rounded to the
@@ -90,6 +90,28 @@
           "op": "state.set", "path": "payments",
           "value": { "op": "seq.concat", "of": ["$payments", { "op": "seq.of", "of": [{ "who": "@who", "what": "@what", "amount": "@amount" }] }] }
         }
+      ]
+    },
+    // Someone taken off the list goes with what they paid, so the rest is shared among those left.
+    "leave": {
+      "params": { "name": { "domain": "$people" } },
+      "effects": [
+        { "op": "state.set", "path": "people", "value": { "op": "seq.where", "source": "$people", "as": "n", "predicate": { "op": "cmp.ne", "left": "@n", "right": "@name" } } },
+        {
+          "op": "state.set", "path": "payments",
+          "value": { "op": "seq.where", "source": "$payments", "as": "p", "predicate": { "op": "cmp.ne", "left": { "op": "rec.at", "record": "@p", "key": "who" }, "right": "@name" } }
+        }
+      ]
+    },
+    // Everybody and every payment, for the next trip or to start from a sample with your own.
+    "clear": {
+      "when": { "op": "logic.or", "any": [
+        { "op": "cmp.gt", "left": { "op": "seq.count", "source": "$people" }, "right": 0 },
+        { "op": "cmp.gt", "left": { "op": "seq.count", "source": "$payments" }, "right": 0 }
+      ] },
+      "effects": [
+        { "op": "state.set", "path": "people", "value": { "op": "seq.of", "of": [] } },
+        { "op": "state.set", "path": "payments", "value": { "op": "seq.of", "of": [] } }
       ]
     },
     // A payment entered wrong is taken back from the end, the one most likely to be wrong.
