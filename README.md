@@ -7,13 +7,13 @@
 ## Make one
 
 - **Ask an AI.** Give an AI that can read web pages the site's address and say what you need — "Read https://reny-develop.github.io/Rulpane/ and write me the JSON Rulpane opens for: a compound growth simulator for monthly investing." The start page builds that request for you; paste the JSON it gives into "Make a link from JSON" to make it a link. The page carries [how to write one](doc/guide.md) ([日本語](doc/guide.ja.md)) as plain HTML, readable without running it, with [a longer part for an AI](doc/guide.ai.md) that the page does not show; both, in English, are at [`llms.txt`](https://reny-develop.github.io/Rulpane/llms.txt). It is short on purpose: it points to the [Registry](https://reny-develop.github.io/Rulealize.Registry/) for the operations rules can use and to the [Gallery](https://reny-develop.github.io/Rulpane.Gallery/) for views, themes and panesets; a whole paneset to copy is any sample's "Edit a copy".
-- **Start from one that exists.** The start page's samples — `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper`, `chess` — open as they are, or go into the editor as a copy with their rules and view written out. Each is published to the [Gallery](#the-gallery) twice, as `reny-develop/split-bill@1` and so on, the name with `-ja` on it being the same screen with its view in Japanese, and the start page offers the ones in its own language.
+- **Start from one that exists.** The start page's samples — `split-bill`, `packing-list`, `scoreboard`, `reversi`, `minesweeper`, `chess` — open as they are, or go into the editor as a copy with their rules and view written out. Each is published to the [Gallery](#the-gallery) twice, as `reny-develop/split-bill@2` and so on, the name with `-ja` on it being the same screen with its view in Japanese, and the start page offers the ones in its own language.
 - **Write it.** The editor on the start page takes one paneset, or a link, checks it the way a link is opened, and hands out the link.
 
 | Link | What it shows |
 | --- | --- |
-| [`#p=reny-develop/split-bill@1`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@1) | A paneset from the Gallery: rules, view and where to start, named at once |
-| [`#p=reny-develop/split-bill@1&t=paper`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@1&t=paper) | The paneset with one of its keys given over |
+| [`#p=reny-develop/split-bill@2`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@2) | A paneset from the Gallery: rules, view and where to start, named at once |
+| [`#p=reny-develop/split-bill@2&t=paper`](https://reny-develop.github.io/Rulpane/#p=reny-develop/split-bill@2&t=paper) | The paneset with one of its keys given over |
 | [`#r=approval`](https://reny-develop.github.io/Rulpane/#r=approval) | The same rules with no view: the screen is made from the rules |
 | [`#r=approval&s=z:q1Yq…`](https://reny-develop.github.io/Rulpane/#r=approval&s=z:q1YqLklMT1WyUipKLctMLVfSATISi_PzlKzySnNyagE) | The same rules, starting from a position the link carries |
 | [`#p={"$schema":"rulpane/paneset/v1","r":"checklist",…}`](https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":{"all":"$steps","done":"$done"},"s":{"steps":["keys","badge","laptop"],"done":[]}}) | A paneset written into the link as plain JSON, as an AI writes one |
@@ -185,9 +185,9 @@ A paneset (`rulpane/paneset/v1`) is a screen as one document, to be named by a l
 }
 ```
 
-A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":…,"s":…}` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=reny-develop/scoreboard@1&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
+A link is a paneset written out key by key, so `#r=checklist&v=progress&b=…&s=…` and `#p={"$schema":"rulpane/paneset/v1","r":"checklist","v":"progress","b":…,"s":…}` are one screen. A link with `p` takes the paneset as its ground and puts any key it gives itself over it: `#p=reny-develop/scoreboard@2&t=paper` is that paneset in another theme. Every move rewrites only `s`, and Start over goes back to the paneset's own `s`.
 
-The start page's samples are panesets in the Gallery, each in English and with `-ja` in Japanese: `reny-develop/split-bill@1`, `packing-list`, `scoreboard`, `reversi`, `minesweeper` and `chess`, the same way. Each is something to use as it is, with a bundled rule set of its own name and a view named for it with `-view` (`reny-develop/split-bill-view@1`). They are kept in [Rulpane.Panes](https://github.com/reny-develop/Rulpane.Panes) and submitted like anybody's.
+The start page's samples are panesets in the Gallery, each in English and with `-ja` in Japanese: `reny-develop/split-bill@2`, `packing-list`, `scoreboard`, `reversi`, `minesweeper` and `chess`, the same way. Each is something to use as it is, with a rule set of its own in the Registry (`Rulealize.RuleSet.SplitBill@1.0.0`, each in [a repository of its own](https://github.com/reny-develop/Rulealize.RuleSet.SplitBill)) and a view named for it with `-view` (`reny-develop/split-bill-view@2`). Their release 1, which named rule sets Rulpane bundled then, is withheld. They are kept in [Rulpane.Panes](https://github.com/reny-develop/Rulpane.Panes) and submitted like anybody's.
 
 ## The Gallery
 
@@ -264,7 +264,6 @@ A local run reads the Registry, nuget.org and the Gallery where they are publish
 | [`src/Rulpane.Engine`](src/Rulpane.Engine/) | What runs a link, apart from how it is drawn: the curated runtime, the sources a fragment names, the readers of views, themes and panesets. The Gallery reads a submission with this same library, so what it records is what the viewer opens |
 | [`src/Rulpane.Viewer`](src/Rulpane.Viewer/) | The Blazor WebAssembly app around it. `wwwroot/` holds the bundled rule sets, views, themes and panesets |
 | [`tool/Guide`](tool/Guide/) | Writes [`doc/guide.md`](doc/guide.md) and [`doc/guide.ja.md`](doc/guide.ja.md), the short guide people see, one per language, and [`doc/guide.ai.md`](doc/guide.ai.md), the one for an AI that the page never shows, into `index.html` outside the app, and the AI's and the English one into `wwwroot/llms.txt`, after checking that every operation they name is one the runtime runs and that every bundled paneset opens and plays. The AI's lists the plugins, filled in from the runtime. Run it after editing either; `pages.yml` runs it with `--check` and publishes nothing if the guide is behind or an example is wrong |
-| [`tool/Minesweeper`](tool/Minesweeper/) | Writes the bundled `minesweeper` rule set, whose cell list, neighbour graph and mine order are too long to keep by hand: `node tool/Minesweeper/minesweeper.mjs src/Rulpane.Viewer/wwwroot/rulesets/minesweeper.json` |
 
 A push to `main` runs [`pages.yml`](.github/workflows/pages.yml), which publishes the viewer and deploys it to GitHub Pages. The repository's Settings → Pages must have its Source set to "GitHub Actions".
 

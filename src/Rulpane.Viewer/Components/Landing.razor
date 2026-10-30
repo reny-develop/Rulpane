@@ -88,7 +88,7 @@
         new(Named("chess"), Say("Chess", "チェス"), Say("Castling, en passant and promotion included. Pick a piece to see where it can go.", "キャスリング、アンパッサン、昇格まで。駒を選ぶと動けるマスが出ます。")),
     ];
 
-    private static string Named(string name) => $"reny-develop/{name}{(Language.Code == "ja" ? "-ja" : "")}@1";
+    private static string Named(string name) => $"reny-develop/{name}{(Language.Code == "ja" ? "-ja" : "")}@2";
 
     private static readonly JsonDocumentOptions Lenient = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
