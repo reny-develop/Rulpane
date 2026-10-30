@@ -92,6 +92,40 @@
         }
       ]
     },
+    // A name spelt wrong is put right, and what they paid goes with it.
+    "rename": {
+      "params": {
+        "name": { "domain": "$people" },
+        "to": { "open": { "op": "type.string", "minLength": 1, "maxLength": 20 } }
+      },
+      "validate": [
+        {
+          "require": {
+            "op": "logic.not",
+            "value": { "op": "seq.any", "source": "$people", "as": "n", "predicate": { "op": "cmp.eq", "left": "@n", "right": "@to" } }
+          },
+          "code": "name.taken"
+        }
+      ],
+      "effects": [
+        {
+          "op": "state.set", "path": "people",
+          "value": { "op": "seq.select", "source": "$people", "as": "n", "select": { "op": "branch.if", "cond": { "op": "cmp.eq", "left": "@n", "right": "@name" }, "then": "@to", "else": "@n" } }
+        },
+        {
+          "op": "state.set", "path": "payments",
+          "value": {
+            "op": "seq.select", "source": "$payments", "as": "r",
+            "select": {
+              "op": "branch.if",
+              "cond": { "op": "cmp.eq", "left": { "op": "rec.at", "record": "@r", "key": "who" }, "right": "@name" },
+              "then": { "who": "@to", "what": { "op": "rec.at", "record": "@r", "key": "what" }, "amount": { "op": "rec.at", "record": "@r", "key": "amount" } },
+              "else": "@r"
+            }
+          }
+        }
+      ]
+    },
     // Someone taken off the list goes with what they paid, so the rest is shared among those left.
     "leave": {
       "params": { "name": { "domain": "$people" } },
