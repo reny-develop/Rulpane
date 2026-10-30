@@ -671,6 +671,8 @@ main.compact { padding-top: 20px; }
 /* Outside the app, so it is there for a reader that does not run the page: one article per
    language, the page's own shown. Laid out as a section of the start page, and only there. */
 body:has(main .play) #guide, body:has(main .failure) #guide { display: none; }
+/* Nor while the app loads, which would show it alone and then push it down; without scripts it stays. */
+@media (scripting: enabled) { body:has(#app > .boot) #guide { display: none; } }
 html:not([lang="ja"]) .guide > [lang="ja"], html[lang="ja"] .guide > [lang="en"] { display: none; }
 /* What an AI reads, styles unapplied: the page never shows it. */
 .guide > .for-ai { display: none; }
