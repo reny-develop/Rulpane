@@ -73,7 +73,7 @@
                             @* Keyed by the moves, so a form left behind by the last position starts empty. *@
                             <MoveForm @key="@string.Join(" | ", open.Select(m => Names.Describe(m)))" Moves="open" Label="ArgumentLabel" Names="Names" Initial="Initial"
                                       Refusals="@(open.Any(m => ReferenceEquals(m, Refused)) ? Refusals : null)"
-                                      OnSubmit="p => OnPlay.InvokeAsync((p.Move, p.Open))" />
+                                      Controls="Controls" OnSubmit="p => OnPlay.InvokeAsync((p.Move, p.Open))" />
                         }
                     </div>
                 }
@@ -123,6 +123,9 @@
     [Parameter] public bool Select { get; set; }
 
     /// <summary>What a field for a parameter of that name starts with, as the view fills it.</summary>
+    /// <summary>How a parameter left open is asked for: a slider or a date, where the view says so.</summary>
+    [Parameter] public IReadOnlyDictionary<string, Control>? Controls { get; set; }
+
     [Parameter] public IReadOnlyDictionary<string, string>? Initial { get; set; }
 
     // What is picked in each input's list, by input; a new position starts every list unpicked.

@@ -49,6 +49,12 @@
     --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
     --shadow-pinned: 0 6px 12px -6px rgb(20 22 26 / 0.18);
+    /* The slices of a pie, in this order and never another: told apart with colour vision of any kind (checked with the data-viz palette validator). */
+    --color-series-1: #2a78d6;
+    --color-series-2: #eb6834;
+    --color-series-3: #1baf7a;
+    --color-series-4: #eda100;
+    --color-series-5: #e87ba4;
     color-scheme: light;
 }
 
@@ -74,6 +80,11 @@
         --color-warn: #f1c75b;
         --color-warn-soft: #3a2f12;
         --shadow-pinned: 0 6px 12px -6px rgb(0 0 0 / 0.6);
+        --color-series-1: #3987e5;
+        --color-series-2: #d95926;
+        --color-series-3: #199e70;
+        --color-series-4: #c98500;
+        --color-series-5: #d55181;
         color-scheme: dark;
     }
 }
@@ -303,7 +314,8 @@ button:focus-visible, .button:focus-visible, input:focus-visible, textarea:focus
 .title-row { display: flex; align-items: center; gap: 10px; }
 .play-head h1 { font-size: 28px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 .play-head .sub { font: 13px var(--font-mono); color: var(--color-muted); }
-.play-head .actions { display: flex; gap: 8px; margin-left: auto; }
+.play-head .actions { display: flex; gap: 8px; margin-left: auto; flex: none; }
+.play-head .actions button { white-space: nowrap; }
 
 .last-move {
     display: flex;
@@ -361,6 +373,13 @@ button:focus-visible, .button:focus-visible, input:focus-visible, textarea:focus
 .field .label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
 .field small { color: var(--color-muted); font-size: 12px; }
 .field.invalid input, .field.invalid select { border-color: var(--color-danger); box-shadow: 0 0 0 0.5px var(--color-danger); }
+/* A yes or no ticked beside its name; a slider with its value at the end of the label; a date from the calendar. */
+.field.check { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px; align-self: start; cursor: pointer; }
+.field.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-accent); box-shadow: none; }
+.field.check .label { font-size: 14px; }
+.field input[type="range"] { width: 100%; padding: 0; border: 0; background: none; box-shadow: none; accent-color: var(--color-accent); }
+.slider-value { margin-left: auto; font: 500 13px var(--font-mono); }
+.field input[type="date"] { font-family: var(--font-mono); max-width: 220px; }
 
 input, textarea, select {
     font: inherit;
@@ -396,6 +415,10 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .layout-heading { font-size: 18px; font-weight: 600; }
 .layout-heading:not(:first-child) { margin-top: 8px; }
 .layout-text { font-size: 15px; line-height: 1.6; color: var(--color-muted); white-space: pre-line; }
+/* Blocks side by side, top-aligned, each column laid out as the view is; one above the other on a narrow screen. */
+.columns { display: grid; gap: 20px; align-items: start; min-width: 0; }
+.compact .columns { gap: 12px; }
+@media (max-width: 720px) { .columns { grid-template-columns: minmax(0, 1fr) !important; } }
 
 /* A view's labels are words for people, not names from the rules. */
 .rows.labelled dt { font: 500 13px var(--font-ui); }
@@ -408,6 +431,20 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .stat-value.number { overflow-wrap: normal; }
 
 .table-scroll { overflow-x: auto; }
+/* How far each thing has got: a bar, and the count beside it; a full bar is done. */
+.progress-list { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px 18px; }
+.progress-item { display: grid; grid-template-columns: minmax(80px, max-content) 1fr auto; align-items: center; gap: 14px; }
+.progress-label { font-size: 13px; font-weight: 500; }
+.progress-track { height: 8px; border-radius: var(--radius-pill); background: var(--color-sunken); overflow: hidden; }
+.progress-fill { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); }
+.progress-fill.full { background: var(--color-ok); }
+.progress-count { font: 400 13px var(--font-mono); color: var(--color-muted); }
+/* The moves at the end of a line, played with what it holds; one asking for more opens a form under it. */
+.table td.row-actions { text-align: right; white-space: nowrap; padding-top: 6px; padding-bottom: 6px; }
+.row-actions .move { padding: 5px 12px; font-size: 13px; }
+.row-actions .move + .move { margin-left: 6px; }
+.table tr.row-form td { padding: 0 18px 14px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table th { padding: 10px 18px; text-align: left; font-size: 12px; font-weight: 500; color: var(--color-muted); border-bottom: 1px solid var(--color-line); white-space: nowrap; }
 .table td { padding: 10px 18px; vertical-align: top; overflow-wrap: anywhere; }
@@ -435,6 +472,30 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .chart .ok, .chart-legend .ok { background: var(--color-ok); }
 .chart .warn, .chart-legend .warn { background: var(--color-warn); }
 .chart .danger, .chart-legend .danger { background: var(--color-danger); }
+/* Lines: 2px whatever the plot's stretch, the last record of each marked with a dot ringed in the surface. */
+.chart-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.chart-lines polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; background: none; }
+.chart-lines .accent { stroke: var(--color-accent); }
+.chart-lines .neutral { stroke: var(--color-line-strong); }
+.chart-lines .ok { stroke: var(--color-ok); }
+.chart-lines .warn { stroke: var(--color-warn); }
+.chart-lines .danger { stroke: var(--color-danger); }
+.chart-dot { position: absolute; left: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, 50%); box-shadow: 0 0 0 2px var(--color-surface); }
+.chart-legend .swatch.line { height: 3px; border-radius: 2px; }
+/* A pie: a ring of shares, each named with its share beside it. */
+.chart-pie { display: flex; align-items: center; gap: 28px; padding: 20px 18px; flex-wrap: wrap; }
+.pie { width: 160px; height: 160px; flex: none; transform: none; }
+.pie path { stroke: var(--color-surface); stroke-width: 0.025; }
+.pie .series-1, .pie-legend .series-1 { fill: var(--color-series-1); background: var(--color-series-1); }
+.pie .series-2, .pie-legend .series-2 { fill: var(--color-series-2); background: var(--color-series-2); }
+.pie .series-3, .pie-legend .series-3 { fill: var(--color-series-3); background: var(--color-series-3); }
+.pie .series-4, .pie-legend .series-4 { fill: var(--color-series-4); background: var(--color-series-4); }
+.pie .series-5, .pie-legend .series-5 { fill: var(--color-series-5); background: var(--color-series-5); }
+.pie .other, .pie-legend .other { fill: var(--color-line-strong); background: var(--color-line-strong); }
+.pie-legend { flex: 1; min-width: 180px; max-width: 280px; display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.pie-legend li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 8px; }
+.pie-legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
+.pie-share { font: 13px var(--font-mono); color: var(--color-muted); }
 
 /* A board keeps its squares square, and as wide as the card lets it up to a comfortable size. */
 .board-card { padding: 16px 18px 18px; }
@@ -483,6 +544,32 @@ input::placeholder, textarea::placeholder { color: var(--color-muted); font-fami
 .square.selected { background: var(--color-accent-soft); box-shadow: inset 0 0 0 2px var(--color-accent); cursor: pointer; }
 .square.target { box-shadow: inset 0 0 0 3px var(--color-accent); }
 .board-choices { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+/* A board drawn as keys: a calculator's face, no wider than one, with its readout on top. A key
+   the rules do not offer now stays where it is, faded. */
+.keys-card { width: 100%; max-width: 440px; margin-inline: auto; }
+.key-display {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+    padding: 4px 0 14px; margin-bottom: 16px; border-bottom: 1px solid var(--color-line);
+    container-type: inline-size; min-width: 0;
+}
+.key-display-above { min-height: 1.4em; font: 400 16px/1.4 var(--font-mono); color: var(--color-muted); text-align: right; overflow-wrap: anywhere; }
+.key-display-value { font: 600 clamp(22px, 12cqi, 44px)/1.15 var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.board.keys { grid-template-columns: repeat(var(--files), minmax(0, 1fr)); gap: 8px; max-width: none; }
+.square.key {
+    aspect-ratio: auto; height: 48px; border-radius: 10px; color: var(--color-text);
+    font: inherit; cursor: pointer; container-type: normal;
+}
+.square.key .square-text { font: 500 18px/1 var(--font-mono), "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", sans-serif; }
+.square.key:not(:disabled):hover { filter: brightness(0.95); }
+.square.key:not(:disabled):active { filter: brightness(0.88); }
+.square.key:disabled { opacity: 0.4; cursor: default; }
+.square.key.empty { background: none; }
+.square.key.tone-neutral { background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-line); }
+.square.key.tone-neutral .square-text { font-size: 15px; }
+.square.key.tone-accent { background: var(--color-accent); color: var(--color-accent-text); }
+.square.key.tone-ok { background: var(--color-ok-soft); color: var(--color-ok); }
+.square.key.tone-warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.square.key.tone-danger { background: var(--color-danger-soft); color: var(--color-danger); }
 .board-rejection { margin-top: 12px; }
 
 /* A theme's compact density: the same screen with less air in it. */
@@ -643,6 +730,12 @@ main.compact { padding-top: 20px; }
     .stat-value { font-size: 24px; }
     .stat-value.number { font-size: 20px; }
     .table th, .table td { padding: 9px 14px; }
+    /* A narrow table keeps each value on one line and scrolls sideways, rather than breaking a date letter
+       by letter; the buttons at the end of a line wrap instead, so none is out of sight. */
+    .table th, .table td { white-space: nowrap; }
+    .table td.row-actions { white-space: normal; min-width: 96px; }
+    .row-actions .move { margin: 2px 0 2px 6px; }
+    .row-actions .move + .move { margin-left: 6px; }
 
     .landing { gap: 36px; padding: 28px 16px 0; }
     .hero { flex-direction: column; align-items: stretch; gap: 24px; }

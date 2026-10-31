@@ -1,9 +1,10 @@
 @using System.Text.Json
 @using System.Text.Json.Nodes
 @*
-    A list of records as bars, drawn in the page with nothing loaded from elsewhere: each record a
-    bar along the bottom, its parts stacked from the floor, against three or so lines of a round
-    scale. Laid out in HTML rather than an image, so the labels stay legible at any width.
+    A list of records as a chart, drawn in the page with nothing loaded from elsewhere: bars stacked
+    from the floor or lines through every record, against three or so lines of a round scale, or a
+    pie of each record's share. Labels are HTML, so they stay legible at any width; the marks are
+    SVG stretched to the plot, its lines kept 2px whatever the stretch.
 *@
 
 <section class="card chart-card">
@@ -12,16 +13,37 @@
         {
             <h2>@Chart.Title</h2>
         }
-        <ul class="chart-legend">
-            @foreach (ChartBar bar in Chart.Bars)
-            {
-                <li><span class="swatch @bar.Tone"></span>@bar.Label</li>
-            }
-        </ul>
+        @if (Chart.As != ChartKind.Pie && Chart.Bars.Count > 1)
+        {
+            <ul class="chart-legend">
+                @foreach (ChartBar bar in Chart.Bars)
+                {
+                    <li><span class="swatch @bar.Tone @(Chart.As == ChartKind.Lines ? "line" : null)"></span>@bar.Label</li>
+                }
+            </ul>
+        }
     </div>
     @if (rows.Count == 0)
     {
         <p class="card-body muted">@Say("Nothing to show.", "表示するものがありません。")</p>
+    }
+    else if (Chart.As == ChartKind.Pie)
+    {
+        <div class="chart-pie" role="img" aria-label="@string.Join("; ", slices.Select(s => $"{s.Label} {Share(s)}"))">
+            <svg viewBox="-1 -1 2 2" class="pie">
+                @foreach (Slice slice in slices)
+                {
+                    <path d="@Arc(slice)" class="@slice.Colour"><title>@($"{slice.Label}: {Written(slice.Value)} ({Share(slice)})")</title></path>
+                }
+            </svg>
+            @* Every slice is named with its share in words, so no reader needs the colour to tell them apart. *@
+            <ul class="pie-legend">
+                @foreach (Slice slice in slices)
+                {
+                    <li><span class="swatch @slice.Colour"></span><span class="pie-name">@slice.Label</span><span class="pie-share number">@Share(slice)</span></li>
+                }
+            </ul>
+        </div>
     }
     else
     {
@@ -37,15 +59,35 @@
                 {
                     <span class="chart-line" style="bottom: @Percent(tick)"></span>
                 }
+                @if (Chart.As == ChartKind.Lines)
+                {
+                    <svg class="chart-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        @foreach (var (bar, n) in Chart.Bars.Select((b, n) => (b, n)))
+                        {
+                            <polyline class="@bar.Tone" points="@Points(n)" vector-effect="non-scaling-stroke" />
+                        }
+                    </svg>
+                }
                 @foreach (var (row, i) in rows.Select((r, i) => (r, i)))
                 {
                     <div class="chart-column" title="@Described(row)">
-                        <div class="chart-bar">
+                        @if (Chart.As == ChartKind.Bars)
+                        {
+                            <div class="chart-bar">
+                                @foreach (var (bar, part) in Chart.Bars.Zip(row.Parts))
+                                {
+                                    <span class="@bar.Tone" style="height: @Percent(part, from: 0)"></span>
+                                }
+                            </div>
+                        }
+                        else if (i == rows.Count - 1)
+                        {
+                            @* The last record of each line is marked, where the eye looks for where things stand. *@
                             @foreach (var (bar, part) in Chart.Bars.Zip(row.Parts))
                             {
-                                <span class="@bar.Tone" style="height: @Percent(part)"></span>
+                                <span class="chart-dot @bar.Tone" style="bottom: @Percent(part)"></span>
                             }
-                        </div>
+                        }
                         <span class="chart-label">@(Labelled(i) ? row.Label : null)</span>
                     </div>
                 }
@@ -57,29 +99,82 @@
 @code {
     [Parameter, EditorRequired] public Chart Chart { get; set; } = default!;
 
-    /// <summary>The records the bars are made of; null or empty for none.</summary>
+    /// <summary>The records the chart is made of; null or empty for none.</summary>
     [Parameter] public JsonArray? Items { get; set; }
 
     [Parameter] public Names Names { get; set; } = Names.None;
 
     private sealed record Column(string Label, IReadOnlyList<decimal> Parts);
 
+    private sealed record Slice(string Label, decimal Value, decimal From, decimal To, string Colour);
+
+    // A pie names five shares at most; the rest are one, so no colour has to be made up for a sixth.
+    private const int Named = 5;
+
     private List<Column> rows = [];
+    private List<Slice> slices = [];
     private List<decimal> ticks = [];
-    private decimal top = 1;
+    private decimal bottom, top = 1;
 
     protected override void OnParametersSet()
     {
-        rows = [.. (Items ?? []).OfType<JsonObject>().Select(r => new Column(
-            Label(r[Chart.X.Key]),
-            [.. Chart.Bars.Select(b => r[b.Key] is JsonValue v && v.GetValueKind() == JsonValueKind.Number ? Math.Max(0, v.GetValue<decimal>()) : 0)]))];
+        var records = (Items ?? []).OfType<JsonObject>().ToList();
+        if (Chart.As == ChartKind.Pie)
+        {
+            Pie(records);
+            rows = [.. slices.Select(s => new Column(s.Label, [s.Value]))];
+            return;
+        }
 
-        // A round step that gives three or so lines below the tallest bar, and the scale up to the line above it.
-        decimal tallest = rows.Select(r => r.Parts.Sum()).DefaultIfEmpty(0).Max();
-        decimal step = Step(tallest / 3);
-        top = Math.Max(step, Math.Ceiling(tallest / step) * step);
-        ticks = [.. Enumerable.Range(0, (int)(top / step) + 1).Select(n => n * step)];
+        rows = [.. records.Select(r => new Column(
+            Label(r[Chart.X.Key]),
+            [.. Chart.Bars.Select(b => Number(r[b.Key]) is decimal d ? (Chart.As == ChartKind.Bars ? Math.Max(0, d) : d) : 0)]))];
+
+        if (Chart.As == ChartKind.Bars)
+        {
+            // A round step that gives three or so lines below the tallest bar, and the scale up to the line above it.
+            decimal tallest = rows.Select(r => r.Parts.Sum()).DefaultIfEmpty(0).Max();
+            decimal step = Step(tallest / 3);
+            bottom = 0;
+            top = Math.Max(step, Math.Ceiling(tallest / step) * step);
+            ticks = [.. Enumerable.Range(0, (int)(top / step) + 1).Select(n => n * step)];
+        }
+        else
+        {
+            // Lines need no floor: the scale runs between round values around the lowest and the highest.
+            var all = rows.SelectMany(r => r.Parts).DefaultIfEmpty(0).ToList();
+            decimal low = all.Min(), high = all.Max();
+            decimal step = Step(high > low ? (high - low) / 3 : Math.Max(1, Math.Abs(high)) / 3);
+            bottom = Math.Floor(low / step) * step;
+            top = Math.Max(bottom + step, Math.Ceiling(high / step) * step);
+            ticks = [.. Enumerable.Range(0, (int)((top - bottom) / step) + 1).Select(n => bottom + n * step)];
+        }
     }
+
+    // The shares in the order the rules give them, the sixth and after as one, and nothing for none.
+    private void Pie(List<JsonObject> records)
+    {
+        var shares = records
+            .Select(r => (Label: Label(r[Chart.X.Key]), Value: Number(r[Chart.Value!]) ?? 0))
+            .Where(s => s.Value > 0)
+            .ToList();
+        if (shares.Count > Named + 1)
+        {
+            shares = [.. shares.Take(Named), (Say("Other", "その他"), shares.Skip(Named).Sum(s => s.Value))];
+        }
+
+        decimal total = shares.Sum(s => s.Value);
+        decimal at = 0;
+        slices = [.. shares.Select((s, i) =>
+        {
+            var slice = new Slice(s.Label, s.Value, at / total, (at + s.Value) / total, i < Named ? $"series-{i + 1}" : "other");
+            at += s.Value;
+            return slice;
+        })];
+    }
+
+    private static decimal? Number(JsonNode? node) =>
+        node is JsonValue v && v.GetValueKind() == JsonValueKind.Number ? v.GetValue<decimal>() : null;
 
     // 1, 2 or 5 times a power of ten.
     private static decimal Step(decimal rough)
@@ -103,7 +198,37 @@
         return new[] { 1m, 2m, 5m, 10m }.Select(f => f * power).First(s => s >= rough);
     }
 
-    private string Percent(decimal value) => $"{Math.Round(value / top * 100, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+    // Where a value stands up the scale; a stacked part's height counts from 0.
+    private string Percent(decimal value, decimal? from = null) =>
+        $"{Math.Round((value - (from ?? bottom)) / (top - bottom) * 100, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
+
+    // Each line's points in a 100 × 100 box: records across, the scale up.
+    private string Points(int line) => string.Join(" ", rows.Select((r, i) =>
+    {
+        decimal x = rows.Count == 1 ? 50 : (i + 0.5m) / rows.Count * 100;
+        decimal y = 100 - (r.Parts[line] - bottom) / (top - bottom) * 100;
+        return $"{Math.Round(x, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)},{Math.Round(y, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+    }));
+
+    // A ring from one share of the way round to another, from the top, clockwise; a whole ring is two halves.
+    private static string Arc(Slice s)
+    {
+        if (s.To - s.From >= 0.9999m)
+        {
+            return "M 0 -1 A 1 1 0 1 1 0 1 A 1 1 0 1 1 0 -1 M 0 -0.6 A 0.6 0.6 0 1 0 0 0.6 A 0.6 0.6 0 1 0 0 -0.6 Z";
+        }
+
+        static string P(decimal share, double r)
+        {
+            double a = (double)share * 2 * Math.PI - Math.PI / 2;
+            return $"{(r * Math.Cos(a)).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)} {(r * Math.Sin(a)).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture)}";
+        }
+
+        int big = s.To - s.From > 0.5m ? 1 : 0;
+        return $"M {P(s.From, 1)} A 1 1 0 {big} 1 {P(s.To, 1)} L {P(s.To, 0.6)} A 0.6 0.6 0 {big} 0 {P(s.From, 0.6)} Z";
+    }
+
+    private static string Share(Slice s) => $"{Math.Round((s.To - s.From) * 100, 0).ToString(System.Globalization.CultureInfo.InvariantCulture)}%";
 
     // The floor is 0 in any unit.
     private string Written(decimal value) => value == 0 ? "0" : Chart.Format?.Write(JsonValue.Create(value)) ?? value.ToString("#,0.####", System.Globalization.CultureInfo.InvariantCulture);
@@ -115,11 +240,11 @@
         _ => value.ToJsonString(),
     };
 
-    // The first, the last, and enough between for about six labels along the bottom.
+    // The first, and every so many after it, for about six labels along the bottom that never meet.
     private bool Labelled(int i)
     {
         int every = new[] { 1, 2, 5, 10, 20, 50, 100 }.First(n => rows.Count / n <= 6);
-        return i == 0 || i == rows.Count - 1 && every == 1 || (i + 1) % every == 0;
+        return i % every == 0;
     }
 
     private string Described(Column row) =>

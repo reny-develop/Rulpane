@@ -8,26 +8,61 @@
     of the squares that move goes to.
 *@
 
-<section class="card board-card">
+<section class="card board-card @(Board.Keys ? "keys-card" : null)">
     @if (Board.Title is not null)
     {
         <div class="card-head"><h2>@Board.Title</h2></div>
     }
-    <div class="board @(Board.Checkered ? "checkered" : null)" style="--files: @Shape.Width">
-        <span></span>
-        @for (int x = 0; x < Shape.Width; x++)
+    @if (Board.Readout is KeyDisplay display)
+    {
+        <div class="key-display" role="status">
+            <span class="key-display-above">@Above(display)</span>
+            <span class="key-display-value">@Written(DisplayRead(display.Bind), display.Format)</span>
+        </div>
+    }
+    <div class="board @(Board.Checkered ? "checkered" : null) @(Board.Keys ? "keys" : null)" style="--files: @Shape.Width">
+        @if (!Board.Keys)
         {
-            <span class="board-label">@Shape.File(x)</span>
+            <span></span>
+            @for (int x = 0; x < Shape.Width; x++)
+            {
+                <span class="board-label">@Shape.File(x)</span>
+            }
         }
         @for (int row = 0; row < Shape.Height; row++)
         {
-            <span class="board-label">@Shape.Rank(row)</span>
+            @if (!Board.Keys)
+            {
+                <span class="board-label">@Shape.Rank(row)</span>
+            }
             @for (int x = 0; x < Shape.Width; x++)
             {
                 string coord = Shape.Coord(x, row);
                 string? text = Value is JsonObject squares && squares[coord] is JsonNode cell ? Text(cell) : null;
                 string shade = Board.Checkered && (x + row) % 2 == 1 ? "dark" : "";
-                if (MoveOn(coord) is ValidInput move)
+                if (Board.Keys)
+                {
+                    @* A key is named by what is on it; one the rules do not offer now stays, and cannot be pressed. *@
+                    string? tone = text is not null && Board.Tones?.TryGetValue(text, out Tone t) == true ? $"tone-{t}" : null;
+                    if (text is null)
+                    {
+                        <span class="square key empty"></span>
+                    }
+                    else if (MoveOn(coord) is ValidInput press)
+                    {
+                        <button class="square key @tone" aria-label="@Names.Value(text)" title="@Names.Describe(press)"
+                                @onclick="() => OnPlay.InvokeAsync((press, null))">
+                            <span class="square-text">@Names.Value(text)</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="square key @tone" disabled aria-label="@Names.Value(text)">
+                            <span class="square-text">@Names.Value(text)</span>
+                        </button>
+                    }
+                }
+                else if (MoveOn(coord) is ValidInput move)
                 {
                     <button class="square playable @shade" title="@Names.Describe(move)" aria-label="@($"{Names.Input(Board.Play!.Input)} {coord}")"
                             @onclick="() => OnPlay.InvokeAsync((move, null))">
@@ -98,7 +133,31 @@
     [Parameter] public IReadOnlyList<string>? Rejection { get; set; }
     [Parameter] public Names Names { get; set; } = Names.None;
 
+    /// <summary>Reads a binding of the view, for the readout over a board of keys.</summary>
+    [Parameter] public Func<Binding, JsonNode?>? Read { get; set; }
+
     private BoardShape Shape => Board.Shape;
+
+    private JsonNode? DisplayRead(Binding binding) => Read?.Invoke(binding);
+
+    // A value as the readout shows it: a number written to the format, text by the name the view gives it.
+    private string Written(JsonNode? value, Format? format) => value switch
+    {
+        null => "",
+        JsonValue v when v.GetValueKind() == JsonValueKind.String => Names.Value(v.GetValue<string>()),
+        JsonValue v when v.GetValueKind() == JsonValueKind.Number => (format ?? Plain).Write(v)!,
+        _ => value.ToJsonString(),
+    };
+
+    private static readonly Format Plain = new(null, 1, "", "");
+
+    // What is over the readout: a value, or a list of them one after another.
+    private string Above(KeyDisplay display) => display.Above is null ? "" : DisplayRead(display.Above) switch
+    {
+        JsonArray list => string.Join(" ", list.Select(v => Written(v, display.Format))),
+        JsonNode value => Written(value, display.Format),
+        null => "",
+    };
 
     private IReadOnlyDictionary<string, ValidInput> squareMoves = new Dictionary<string, ValidInput>();
     private IReadOnlyList<(string From, string To, ValidInput Move)> pairs = [];

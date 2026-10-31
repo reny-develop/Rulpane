@@ -352,11 +352,11 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             switch (kind)
             {
                 case "heading":
-                    Keys(block, at, "c", "showWhen", "text");
-                    return new Heading(String(block, at, "text"), showWhen);
+                    Keys(block, at, "c", "showWhen", "text", "format");
+                    return new Heading(String(block, at, "text"), showWhen) { Parts = Parts(String(block, at, "text"), $"{at}.text"), Format = ReadFormat(block, at) };
                 case "text":
-                    Keys(block, at, "c", "showWhen", "text");
-                    return new Paragraph(String(block, at, "text"), showWhen);
+                    Keys(block, at, "c", "showWhen", "text", "format");
+                    return new Paragraph(String(block, at, "text"), showWhen) { Parts = Parts(String(block, at, "text"), $"{at}.text"), Format = ReadFormat(block, at) };
                 case "fields":
                     Keys(block, at, "c", "showWhen", "title", "rows");
                     return new Fields(
@@ -364,30 +364,74 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                         Each(block, at, "rows", ReadRow),
                         showWhen);
                 case "chart":
-                    Keys(block, at, "c", "showWhen", "title", "bind", "x", "bars", "format");
+                    Keys(block, at, "c", "showWhen", "title", "bind", "x", "bars", "lines", "value", "format", "as");
+                    ChartKind chartKind = OptionalString(block, at, "as") switch
+                    {
+                        null or "bars" => ChartKind.Bars,
+                        "lines" => ChartKind.Lines,
+                        "pie" => ChartKind.Pie,
+                        string other => throw new FormatException($"{at}.as: \"{other}\" is not a kind of chart. It is bars, lines or pie."),
+                    };
+                    // What each kind is drawn from: bars stacked, lines, or one value cut into slices.
+                    string series = chartKind == ChartKind.Lines ? "lines" : "bars";
+                    foreach (string wrong in new[] { "bars", "lines", "value" }.Where(k => block.ContainsKey(k) && k != (chartKind == ChartKind.Pie ? "value" : series)))
+                    {
+                        throw new FormatException($"{at}.{wrong}: a chart drawn as {chartKind.ToString().ToLowerInvariant()} takes {(chartKind == ChartKind.Pie ? "value, the key of each record's share" : series)}, not {wrong}.");
+                    }
+
                     return new Chart(
                         OptionalString(block, at, "title"),
                         RequiredBinding(block, at, "bind", Kind.List),
                         ReadAxis(block["x"], $"{at}.x"),
-                        Each(block, at, "bars", ReadBar),
+                        chartKind == ChartKind.Pie ? [] : Each(block, at, series, ReadBar),
                         ReadFormat(block, at),
-                        showWhen);
+                        showWhen)
+                    {
+                        As = chartKind,
+                        Value = chartKind == ChartKind.Pie ? String(block, at, "value") : null,
+                    };
+                case "columns":
+                    Keys(block, at, "c", "showWhen", "blocks", "widths");
+                    List<Block> blocks = Each(block, at, "blocks", (n, a) => n is JsonObject { } child && child["c"] is JsonValue c && c.TryGetValue(out string? inner) && inner == "columns"
+                        ? throw new FormatException($"{a}: columns do not go inside columns; put the blocks side by side in one.")
+                        : Block(n, a));
+                    if (blocks.Count is < 2 or > 4)
+                    {
+                        throw new FormatException($"{at}.blocks: columns put 2 to 4 blocks side by side, and these are {blocks.Count}.");
+                    }
+
+                    List<decimal>? widths = block.ContainsKey("widths")
+                        ? Each(block, at, "widths", (n, a) => n is JsonValue v && v.TryGetValue(out decimal w) && w > 0 ? w : throw new FormatException($"{a}: a width is a number above 0, the share of the row the block takes."))
+                        : null;
+                    if (widths is not null && widths.Count != blocks.Count)
+                    {
+                        throw new FormatException($"{at}.widths: one width for each block, and there are {blocks.Count} blocks and {widths.Count} widths.");
+                    }
+
+                    return new Columns(blocks, widths, showWhen);
                 case "stats":
                     Keys(block, at, "c", "showWhen", "items");
                     return new Stats(Each(block, at, "items", ReadStat), showWhen);
+                case "progress":
+                    Keys(block, at, "c", "showWhen", "title", "items");
+                    return new Progress(OptionalString(block, at, "title"), Each(block, at, "items", ReadProgress), showWhen);
                 case "list":
                     Keys(block, at, "c", "showWhen", "title", "bind");
                     return new ValueList(OptionalString(block, at, "title"), RequiredBinding(block, at, "bind", Kind.List), showWhen);
                 case "table":
-                    Keys(block, at, "c", "showWhen", "title", "bind", "columns");
+                    Keys(block, at, "c", "showWhen", "title", "bind", "columns", "rowActions");
                     return new Table(
                         OptionalString(block, at, "title"),
                         RequiredBinding(block, at, "bind", Kind.List),
-                        block.ContainsKey("columns") ? Each(block, at, "columns", ReadColumn) : null,
-                        showWhen);
+                        block.ContainsKey("columns") ? Each(block, at, "columns", (n, a) => ReadColumn(n, a, String(block, at, "bind"))) : null,
+                        showWhen)
+                    {
+                        RowActions = block.ContainsKey("rowActions") ? Each(block, at, "rowActions", ReadRowAction) : null,
+                    };
                 case "actions":
-                    Keys(block, at, "c", "showWhen", "title", "inputs", "as", "fill");
-                    return new Actions(OptionalString(block, at, "title"), Inputs(block, at), OptionalString(block, at, "as") switch
+                    Keys(block, at, "c", "showWhen", "title", "inputs", "as", "fill", "controls");
+                    IReadOnlyList<string>? offered = Inputs(block, at);
+                    return new Actions(OptionalString(block, at, "title"), offered, OptionalString(block, at, "as") switch
                     {
                         null or "buttons" => false,
                         "select" => true,
@@ -400,9 +444,10 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                             JsonObject fill => fill.ToDictionary(f => f.Key, f => RequiredBinding(fill, $"{at}.fill", f.Key)),
                             _ => throw new FormatException($"{at}.fill: a map of parameters, each to the binding its field starts with."),
                         },
+                        Controls = block["controls"] is JsonNode controls ? ReadControls(controls, $"{at}.controls", offered) : null,
                     };
                 case "board":
-                    Keys(block, at, "c", "showWhen", "title", "bind", "shape", "play", "move", "pieces", "checkered");
+                    Keys(block, at, "c", "showWhen", "title", "bind", "shape", "play", "move", "pieces", "checkered", "as", "tones", "display");
                     Binding board = RequiredBinding(block, at, "bind", Kind.Board);
                     BoardShape? shape = BoardShapeOf(board);
                     if (OptionalString(block, at, "shape") is string sized)
@@ -417,6 +462,32 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                     if (block.ContainsKey("play") && block.ContainsKey("move"))
                     {
                         throw new FormatException($"{at}: a board is played by one square (play) or by two (move), not both.");
+                    }
+
+                    // A board of keys is pressed one key at a time, and its look is the keys' own.
+                    bool keys = OptionalString(block, at, "as") switch
+                    {
+                        null or "board" => false,
+                        "keys" => true,
+                        string other => throw new FormatException($"{at}.as: \"{other}\" is not a way to draw a board. It is board or keys."),
+                    };
+                    if (!keys)
+                    {
+                        foreach (string only in new[] { "tones", "display" }.Where(block.ContainsKey))
+                        {
+                            throw new FormatException($"{at}.{only}: only a board drawn as keys has {only}; add \"as\": \"keys\".");
+                        }
+                    }
+                    else if (!block.ContainsKey("play") || block.ContainsKey("checkered"))
+                    {
+                        throw new FormatException($"{at}: a board drawn as keys is pressed one key at a time, so it has play, and is not checkered.");
+                    }
+
+                    Dictionary<string, Tone>? tones = null;
+                    if (block["tones"] is JsonNode toneNode)
+                    {
+                        JsonObject tone = toneNode as JsonObject ?? throw new FormatException($"{at}.tones: tones map values to tones.");
+                        tones = Looks(tone.ToDictionary(t => t.Key, t => ReadTone(t.Value, $"{at}.tones.{t.Key}")), String(block, at, "bind"));
                     }
 
                     return new Board(
@@ -434,9 +505,12 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
                             JsonValue v when v.GetValueKind() is System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False => v.GetValue<bool>(),
                             _ => throw new FormatException($"{at}.checkered: true or false."),
                         },
+                        Keys = keys,
+                        Tones = tones,
+                        Readout = block["display"] is JsonNode display ? ReadDisplay(display, $"{at}.display") : null,
                     };
                 default:
-                    throw new FormatException($"{at}.c: there is no block called \"{kind}\". A view has heading, text, fields, stats, list, table, board and actions.");
+                    throw new FormatException($"{at}.c: there is no block called \"{kind}\". A view has heading, text, fields, stats, progress, list, table, chart, board, actions and columns.");
             }
         }
 
@@ -461,6 +535,14 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             };
         }
 
+        // A readout over a board of keys: { "bind", "format", "above" }.
+        private KeyDisplay ReadDisplay(JsonNode node, string at)
+        {
+            JsonObject display = node as JsonObject ?? throw new FormatException($"{at}: a display is an object with bind, and optionally format and above.");
+            Keys(display, at, "bind", "format", "above");
+            return new KeyDisplay(RequiredBinding(display, at, "bind"), ReadFormat(display, at), OptionalBinding(display, at, "above"));
+        }
+
         private Stat ReadStat(JsonNode? node, string at)
         {
             JsonObject stat = node as JsonObject ?? throw new FormatException($"{at}: a stat is an object.");
@@ -468,8 +550,73 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             return new Stat(String(stat, at, "label"), RequiredBinding(stat, at, "bind")) { Format = ReadFormat(stat, at) };
         }
 
-        // A column is its key, or the key with a label to head it.
-        private Column ReadColumn(JsonNode? node, string at)
+        // { "input": "leave", "args": { "name": "player" } }: the input, and for each of its
+        // parameters given by the row, the row's key that gives it.
+        private RowAction ReadRowAction(JsonNode? node, string at)
+        {
+            JsonObject action = node as JsonObject ?? throw new FormatException($"{at}: a row's action is an object with an input and args.");
+            Keys(action, at, "input", "args");
+            string input = Input(String(action, at, "input"), $"{at}.input");
+            JsonObject args = action["args"] as JsonObject ?? throw new FormatException($"{at}.args: a map of the input's parameters, each to the row's key that gives it.");
+            var given = args.ToDictionary(a => a.Key, a => OptionalString(args, $"{at}.args", a.Key) ?? throw new FormatException($"{at}.args.{a.Key}: a key of the row is a string."));
+            foreach (string parameter in given.Keys)
+            {
+                CheckParameter(input, parameter, $"{at}.args");
+            }
+
+            return new RowAction(input, given);
+        }
+
+        // { "years": "slider", "due": "date" }: how a parameter left open is asked for. Where the
+        // rules write the input themselves, its schema must suit: a slider a number between a min
+        // and a max, a date text.
+        private Dictionary<string, Control> ReadControls(JsonNode node, string at, IReadOnlyList<string>? offered)
+        {
+            JsonObject controls = node as JsonObject ?? throw new FormatException($"{at}: a map of parameters, each to slider or date.");
+            var read = new Dictionary<string, Control>(StringComparer.Ordinal);
+            foreach (var (parameter, value) in controls)
+            {
+                Control control = OptionalString(controls, at, parameter) switch
+                {
+                    "slider" => Control.Slider,
+                    "date" => Control.Date,
+                    _ => throw new FormatException($"{at}.{parameter}: a control is slider or date."),
+                };
+                if (rules?["inputs"] is JsonObject written)
+                {
+                    var schemas = written
+                        .Where(i => offered is null || offered.Contains(i.Key))
+                        .Select(i => i.Value?["params"]?[parameter])
+                        .Where(p => p is not null)
+                        .ToList();
+                    if (schemas.Count == 0 && (offered is null || offered.All(written.ContainsKey)))
+                    {
+                        throw new FormatException($"{at}.{parameter}: no input this block offers has a parameter \"{parameter}\".");
+                    }
+
+                    foreach (JsonNode? schema in schemas.Select(p => p!["open"]))
+                    {
+                        string? kind = schema?["op"]?.GetValue<string>();
+                        bool suits = control == Control.Slider
+                            ? kind is "type.int" or "type.decimal" && schema!["min"] is not null && schema["max"] is not null
+                            : kind == "type.string";
+                        if (!suits)
+                        {
+                            throw new FormatException(control == Control.Slider
+                                ? $"{at}.{parameter}: a slider asks for a number between a min and a max, and the rules leave \"{parameter}\" open as something else."
+                                : $"{at}.{parameter}: a date is written as text, 2026-11-03, and the rules leave \"{parameter}\" open as something else.");
+                        }
+                    }
+                }
+
+                read[parameter] = control;
+            }
+
+            return read;
+        }
+
+        // A column is its key, or the key with a label to head it, and how its values read.
+        private Column ReadColumn(JsonNode? node, string at, string table)
         {
             if (node is JsonValue value && value.TryGetValue(out string? key))
             {
@@ -477,9 +624,24 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             }
 
             JsonObject column = node as JsonObject ?? throw new FormatException($"{at}: a column is a key or an object.");
-            Keys(column, at, "key", "label", "format");
+            Keys(column, at, "key", "label", "format", "tone");
             string k = String(column, at, "key");
-            return new Column(k, OptionalString(column, at, "label") ?? k) { Format = ReadFormat(column, at) };
+            Dictionary<string, Tone>? tones = null;
+            if (column["tone"] is JsonNode toneNode)
+            {
+                JsonObject tone = toneNode as JsonObject ?? throw new FormatException($"{at}.tone: a tone maps values to tones.");
+                tones = Looks(tone.ToDictionary(t => t.Key, t => ReadTone(t.Value, $"{at}.tone.{t.Key}")), table);
+            }
+
+            return new Column(k, OptionalString(column, at, "label") ?? k) { Format = ReadFormat(column, at), Tones = tones };
+        }
+
+        // { "label": "Packed", "bind": "summary.done", "of": "summary.all" }
+        private ProgressItem ReadProgress(JsonNode? node, string at)
+        {
+            JsonObject item = node as JsonObject ?? throw new FormatException($"{at}: a bar is an object with a label, bind and of.");
+            Keys(item, at, "label", "bind", "of");
+            return new ProgressItem(String(item, at, "label"), RequiredBinding(item, at, "bind"), RequiredBinding(item, at, "of"));
         }
 
         // "format": { "digits": 0, "divide": 10000, "prefix": "", "suffix": "万" }, every key optional.
@@ -674,6 +836,68 @@ public sealed record View(string? Title, IReadOnlyList<Block> Layout, Names Name
             return Known(binding, Join(at, key));
         }
 
+        // "Total: {total} yen": the words, and a binding in each pair of braces. {{ and }} are a brace.
+        private List<TextPart> Parts(string text, string at)
+        {
+            var parts = new List<TextPart>();
+            var words = new System.Text.StringBuilder();
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if ((c == '{' || c == '}') && i + 1 < text.Length && text[i + 1] == c)
+                {
+                    words.Append(c);
+                    i++;
+                }
+                else if (c == '{')
+                {
+                    int end = text.IndexOf('}', i + 1);
+                    if (end < 0)
+                    {
+                        throw new FormatException($"{at}: a {{ with no }} after it. A value goes in braces, {{total}}, and a brace itself is written {{{{.");
+                    }
+
+                    if (words.Length > 0)
+                    {
+                        parts.Add(new TextPart(words.ToString(), null));
+                        words.Clear();
+                    }
+
+                    parts.Add(new TextPart(null, ViewBinding(text[(i + 1)..end], at)));
+                    i = end;
+                }
+                else if (c == '}')
+                {
+                    throw new FormatException($"{at}: a }} with no {{ before it. A brace itself is written }}}}.");
+                }
+                else
+                {
+                    words.Append(c);
+                }
+            }
+
+            if (words.Length > 0)
+            {
+                parts.Add(new TextPart(words.ToString(), null));
+            }
+
+            return parts;
+        }
+
+        // A binding of the view's written in its text, read as one in its own key would be.
+        private Binding ViewBinding(string text, string at)
+        {
+            Binding binding = Binding.Parse(text, at);
+            if (expectedProjections is not null)
+            {
+                return Resolve(binding, at, []);
+            }
+
+            return !binding.FromState && BoundValue(binding.Root) is Binding bound
+                ? bound with { Path = [.. bound.Path, .. binding.Path] }
+                : Known(binding, at);
+        }
+
         // A binding of these rules, as b gives one.
         private Binding RuleBinding(string text, string at) => Known(Binding.Parse(text, at), at);
 
@@ -731,9 +955,26 @@ public enum Tone { neutral, accent, ok, warn, danger }
 /// <summary>One piece of a layout. Shown only while <see cref="ShowWhen"/>, if it has one, reads <c>true</c>.</summary>
 public abstract record Block(Binding? ShowWhen);
 
-public sealed record Heading(string Text, Binding? ShowWhen) : Block(ShowWhen);
+/// <summary>A heading; values the view writes into it in braces are read as it is shown.</summary>
+public sealed record Heading(string Text, Binding? ShowWhen) : Block(ShowWhen)
+{
+    public IReadOnlyList<TextPart> Parts { get; init; } = [new(Text, null)];
 
-public sealed record Paragraph(string Body, Binding? ShowWhen) : Block(ShowWhen);
+    /// <summary>How a number written into it reads.</summary>
+    public Format? Format { get; init; }
+}
+
+/// <summary>A paragraph; values the view writes into it in braces are read as it is shown.</summary>
+public sealed record Paragraph(string Body, Binding? ShowWhen) : Block(ShowWhen)
+{
+    public IReadOnlyList<TextPart> Parts { get; init; } = [new(Body, null)];
+
+    /// <summary>How a number written into it reads.</summary>
+    public Format? Format { get; init; }
+}
+
+/// <summary>A piece of a text: words as they are, or the value at a binding.</summary>
+public sealed record TextPart(string? Words, Binding? Bind);
 
 /// <summary>A card of labelled values. A row with a tone shows its value as a chip of that tone.</summary>
 public sealed record Fields(string? Title, IReadOnlyList<Row> Rows, Binding? ShowWhen) : Block(ShowWhen);
@@ -743,6 +984,12 @@ public sealed record Row(string Label, Binding Bind, IReadOnlyDictionary<string,
     /// <summary>How the value is written, when it is a number.</summary>
     public Format? Format { get; init; }
 }
+
+/// <summary>
+/// Blocks side by side, each taking its share of <see cref="Widths"/> of the row, or an equal one;
+/// on a narrow screen they are one above the other, in order.
+/// </summary>
+public sealed record Columns(IReadOnlyList<Block> Blocks, IReadOnlyList<decimal>? Widths, Binding? ShowWhen) : Block(ShowWhen);
 
 /// <summary>Values set large, side by side.</summary>
 public sealed record Stats(IReadOnlyList<Stat> Items, Binding? ShowWhen) : Block(ShowWhen);
@@ -781,7 +1028,20 @@ public sealed record Format(int? Digits, decimal Divide, string Prefix, string S
 /// A list of records as bars, one per record along <see cref="X"/>, each made of the
 /// <see cref="Bars"/> stacked from the bottom: a balance as what was paid in and what it earned.
 /// </summary>
-public sealed record Chart(string? Title, Binding Bind, ChartAxis X, IReadOnlyList<ChartBar> Bars, Format? Format, Binding? ShowWhen) : Block(ShowWhen);
+public sealed record Chart(string? Title, Binding Bind, ChartAxis X, IReadOnlyList<ChartBar> Bars, Format? Format, Binding? ShowWhen) : Block(ShowWhen)
+{
+    /// <summary>
+    /// How the records are drawn: as bars, as lines (each of <see cref="Bars"/> a line through
+    /// every record), or as a pie of <see cref="Value"/>, a slice per record named by <see cref="X"/>.
+    /// </summary>
+    public ChartKind As { get; init; }
+
+    /// <summary>The key of each record's share, for a pie.</summary>
+    public string? Value { get; init; }
+}
+
+/// <summary>The kinds of chart: bars stacked from the floor, lines over time, or a pie of shares.</summary>
+public enum ChartKind { Bars, Lines, Pie }
 
 /// <summary>The key each record is labelled by along the bottom, and how that label is written.</summary>
 public sealed record ChartAxis(string Key, Format? Format);
@@ -790,13 +1050,41 @@ public sealed record ChartAxis(string Key, Format? Format);
 public sealed record ChartBar(string Key, string Label, Tone Tone);
 
 /// <summary>A list of records, one per line. Without columns, every key any of them has.</summary>
-public sealed record Table(string? Title, Binding Bind, IReadOnlyList<Column>? Columns, Binding? ShowWhen) : Block(ShowWhen);
+public sealed record Table(string? Title, Binding Bind, IReadOnlyList<Column>? Columns, Binding? ShowWhen) : Block(ShowWhen)
+{
+    /// <summary>The moves at the end of each line, each played with what that line holds.</summary>
+    public IReadOnlyList<RowAction>? RowActions { get; init; }
+}
+
+/// <summary>
+/// A move offered on each line of a table: the rules' input, and for each parameter the line
+/// gives, the key of the line that gives it. Parameters it leaves out are asked for when it is pressed.
+/// </summary>
+public sealed record RowAction(string Input, IReadOnlyDictionary<string, string> Args)
+{
+    /// <summary>The moves of the input whose arguments are what this line holds.</summary>
+    public IReadOnlyList<ValidInput> For(JsonNode? row, IEnumerable<ValidInput>? moves) =>
+        moves is null || row is not JsonObject record
+            ? []
+            : [.. moves.Where(m => m.Input == Input && Args.All(a =>
+                m.Arguments.TryGetValue(a.Key, out string? given) && record[a.Value] is JsonNode held
+                && Display.Unquote(given) == (held is JsonValue v && v.GetValueKind() == JsonValueKind.String ? v.GetValue<string>() : held.ToJsonString())))];
+}
 
 public sealed record Column(string Key, string Label)
 {
     /// <summary>How each value in the column is written, when it is a number; such a column is set to the right.</summary>
     public Format? Format { get; init; }
+
+    /// <summary>The tone of a value in the column, shown as a chip of that colour.</summary>
+    public IReadOnlyDictionary<string, Tone>? Tones { get; init; }
 }
+
+/// <summary>Bars of how far each thing has got: the value at a binding out of the value at another.</summary>
+public sealed record Progress(string? Title, IReadOnlyList<ProgressItem> Items, Binding? ShowWhen) : Block(ShowWhen);
+
+/// <summary>One bar: what it is called, how many are done, and out of how many.</summary>
+public sealed record ProgressItem(string Label, Binding Bind, Binding Of);
 
 /// <summary>The values of a list, side by side: what a table would show with no columns to put them in.</summary>
 public sealed record ValueList(string? Title, Binding Bind, Binding? ShowWhen) : Block(ShowWhen);
@@ -840,6 +1128,18 @@ public sealed record Board(
     public bool Checkered { get; init; }
 
     /// <summary>
+    /// Whether the board is drawn as keys, as a calculator's are: no coordinates, and a key the
+    /// rules do not offer now is shown, and cannot be pressed.
+    /// </summary>
+    public bool Keys { get; init; }
+
+    /// <summary>The colour of each key holding one of these values; a board of keys only.</summary>
+    public IReadOnlyDictionary<string, Tone>? Tones { get; init; }
+
+    /// <summary>The readout over the keys; a board of keys only.</summary>
+    public KeyDisplay? Readout { get; init; }
+
+    /// <summary>
     /// The moves played by choosing two squares, each with the squares it goes from and to. Two
     /// moves can share both squares — a pawn promoted to one piece or another — and the board
     /// asks which once both are chosen.
@@ -863,6 +1163,13 @@ public sealed record Board(
         SquareMoves(moves).Values.Concat(SquarePairs(moves).Select(p => p.Move));
 }
 
+/// <summary>
+/// The readout over a board of keys: the value at <see cref="Bind"/> set large, and over it, small,
+/// the value or the list of values at <see cref="Above"/> — what a calculator shows of the sum so far.
+/// A number in either is written to <see cref="Format"/>.
+/// </summary>
+public sealed record KeyDisplay(Binding Bind, Format? Format, Binding? Above);
+
 /// <summary>The input a square plays, and the parameter the square goes in.</summary>
 public sealed record SquareMove(string Input, string Parameter);
 
@@ -880,7 +1187,16 @@ public sealed record Actions(string? Title, IReadOnlyList<string>? Inputs, bool 
     /// that changes a setting opens on the setting as it is.
     /// </summary>
     public IReadOnlyDictionary<string, Binding>? Fill { get; init; }
+
+    /// <summary>How a parameter left open is asked for, where a field to type in is not the best way.</summary>
+    public IReadOnlyDictionary<string, Control>? Controls { get; init; }
 }
+
+/// <summary>
+/// A way to ask for a value other than a field to type in: a slider between the bounds of a
+/// number, or a calendar giving a date as text, <c>2026-11-03</c>. A yes or no is always a checkbox.
+/// </summary>
+public enum Control { Slider, Date }
 
 /// <summary>
 /// Where a value comes from: <c>summary.stage</c> is the field <c>stage</c> of the projection

@@ -4,15 +4,15 @@
 @* A screen laid out by a view document. Everything shown is read through a binding; nothing here decides anything. *@
 
 <div class="layout">
-    @foreach (Block block in View.Layout.Where(Shown))
+    @foreach (Block block in (Blocks ?? View.Layout).Where(Shown))
     {
         @switch (block)
         {
             case Heading heading:
-                <h2 class="layout-heading">@heading.Text</h2>
+                <h2 class="layout-heading">@Written(heading.Parts, heading.Format)</h2>
                 break;
             case Paragraph paragraph:
-                <p class="layout-text">@paragraph.Body</p>
+                <p class="layout-text">@Written(paragraph.Parts, paragraph.Format)</p>
                 break;
             case Fields fields:
                 <section class="card">
@@ -115,11 +115,16 @@
                                         {
                                             <th class="@(column.Format is null ? null : "number")">@column.Label</th>
                                         }
+                                        @if (table.RowActions is not null)
+                                        {
+                                            <th><span class="sr-only">@Say("Actions", "操作")</span></th>
+                                        }
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (JsonNode? item in items)
+                                    @foreach (var (item, line) in items.Select((item, i) => (item, i)))
                                     {
+                                        string rowKey = $"{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(table)}:{line}";
                                         <tr>
                                             @foreach (Column column in columns)
                                             {
@@ -128,12 +133,49 @@
                                                 {
                                                     <td class="number">@written</td>
                                                 }
+                                                else if (column.Tones is not null && cell is JsonValue)
+                                                {
+                                                    string held = Display.Unquote(cell.ToJsonString());
+                                                    string named = View.Names.Value(held);
+                                                    <td><span class="chip dot @(named == held ? "mono" : null) @ToneClass(column.Tones.GetValueOrDefault(held))">@named</span></td>
+                                                }
                                                 else
                                                 {
                                                     <td><ValueView Value="cell" Names="View.Names" /></td>
                                                 }
                                             }
+                                            @if (table.RowActions is not null)
+                                            {
+                                                @* A move this line cannot make now leaves no button; one that needs more than the line asks for it below. *@
+                                                <td class="row-actions">
+                                                    @foreach (RowAction action in table.RowActions)
+                                                    {
+                                                        IReadOnlyList<ValidInput> here = action.For(item, Moves);
+                                                        if (here.Count == 1 && here[0].IsComplete)
+                                                        {
+                                                            <button class="move" @onclick="() => OnPlay.InvokeAsync((here[0], null))">@View.Names.Input(action.Input)</button>
+                                                        }
+                                                        else if (here.Count > 0 && here.All(m => !m.IsComplete))
+                                                        {
+                                                            string formKey = $"{rowKey}:{action.Input}";
+                                                            <button class="move" aria-expanded="@(openRow == formKey ? "true" : "false")"
+                                                                    @onclick="() => openRow = openRow == formKey ? null : formKey">@View.Names.Input(action.Input)</button>
+                                                        }
+                                                    }
+                                                </td>
+                                            }
                                         </tr>
+                                        @if (table.RowActions?.FirstOrDefault(a => openRow == $"{rowKey}:{a.Input}") is RowAction asked
+                                             && asked.For(item, Moves) is { Count: > 0 } open && open.All(m => !m.IsComplete))
+                                        {
+                                            <tr class="row-form">
+                                                <td colspan="@(columns.Count + 1)">
+                                                    <MoveForm @key="@($"{rowKey}:{asked.Input}")" Moves="open" Label="m => View.Names.Input(m.Input)" Names="View.Names"
+                                                              Refusals="@(open.Any(m => ReferenceEquals(m, Refused)) ? Refusals : null)"
+                                                              OnSubmit="async p => { openRow = null; await OnPlay.InvokeAsync((p.Move, p.Open)); }" />
+                                                </td>
+                                            </tr>
+                                        }
                                     }
                                 </tbody>
                             </table>
@@ -148,16 +190,48 @@
             case Chart chart:
                 <ChartView Chart="chart" Items="@(Read(chart.Bind) as JsonArray)" Names="View.Names" />
                 break;
-            case Board board:
-                <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="Rejection" Names="View.Names" />
+            case Progress progress:
+                <section class="card">
+                    @if (progress.Title is not null)
+                    {
+                        <div class="card-head"><h2>@progress.Title</h2></div>
+                    }
+                    <div class="progress-list">
+                        @foreach (ProgressItem bar in progress.Items)
+                        {
+                            decimal? done = Number(Read(bar.Bind)), of = Number(Read(bar.Of));
+                            decimal share = done is decimal d && of is decimal o && o > 0 ? Math.Clamp(d / o, 0, 1) : 0;
+                            <div class="progress-item">
+                                <span class="progress-label">@bar.Label</span>
+                                <span class="progress-track" role="progressbar" aria-label="@bar.Label" aria-valuemin="0" aria-valuemax="@of" aria-valuenow="@done">
+                                    <span class="progress-fill @(share == 1 ? "full" : null)" style="width: @((share * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+                                </span>
+                                <span class="progress-count number">@Count(done) / @Count(of)</span>
+                            </div>
+                        }
+                    </div>
+                </section>
                 break;
-            @*
-                Moves of named inputs that none of are available now leave nothing to show. "*" always
-                says so, unless every move there is is already a square of a board on screen.
-            *@
-            case Actions actions when Moves is not null && (Offered(actions).Count > 0 || actions.Inputs is null && OnBoards.Count == 0):
+            case Columns columns when Present(columns).Count > 0:
+                @*
+                    Each block side by side is laid out as the view lays out any; on a narrow screen they stack.
+                    One with nothing to show now gives its room to the others rather than leaving a gap.
+                *@
+                var present = Present(columns);
+                <div class="columns" style="grid-template-columns: @string.Join(" ", present.Select(p => $"minmax(0, {p.Width.ToString(System.Globalization.CultureInfo.InvariantCulture)}fr)"))">
+                    @foreach (Block inner in present.Select(p => p.Block))
+                    {
+                        <ViewLayout View="View" Blocks="[inner]" Projections="Projections" Data="Data" Moves="Moves" Truncated="Truncated"
+                                    OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" />
+                    }
+                </div>
+                break;
+            case Board board:
+                <BoardView Board="board" Value="@Read(board.Bind)" Moves="Moves" OnPlay="OnPlay" Refused="Refused" Rejection="Rejection" Names="View.Names" Read="Read" />
+                break;
+            case Actions actions when Offers(actions):
                 <MovePanel Moves="@Offered(actions)" Truncated="Truncated" Title="@(actions.Title ?? Say("Moves", "操作"))" Side="false" Select="actions.Select"
-                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" Initial="Filled(actions)" />
+                           OnPlay="OnPlay" Refused="Refused" Refusals="Refusals" Rejection="Rejection" Names="View.Names" Initial="Filled(actions)" Controls="actions.Controls" />
                 break;
         }
     }
@@ -165,6 +239,9 @@
 
 @code {
     [Parameter, EditorRequired] public View View { get; set; } = default!;
+
+    /// <summary>The blocks to lay out: the view's own, or the one a column of it holds.</summary>
+    [Parameter] public IReadOnlyList<Block>? Blocks { get; set; }
 
     /// <summary>Every projection by name, already answered for this position.</summary>
     [Parameter, EditorRequired] public IReadOnlyDictionary<string, JsonNode?> Projections { get; set; } = default!;
@@ -181,6 +258,9 @@
     [Parameter] public IReadOnlyDictionary<string, string[]>? Refusals { get; set; }
     [Parameter] public IReadOnlyList<string>? Rejection { get; set; }
 
+    // The line of a table whose move is asking for what the line does not give, and which move.
+    private string? openRow;
+
     private JsonNode? Read(Binding binding) => binding.Read(name => Projections.GetValueOrDefault(name), Data);
 
     // Only a true value shows a block: the rules say when, so anything that is not a plain yes is a no.
@@ -192,7 +272,21 @@
     private List<ValidInput> Offered(Actions actions) =>
         Moves!.Where(m => actions.Inputs is null ? !OnBoards.Contains(m) : actions.Inputs.Contains(m.Input)).ToList();
 
-    private HashSet<ValidInput> OnBoards => [.. View.Layout.OfType<Board>().Where(Shown).SelectMany(b => b.Offered(Moves))];
+    // Moves of named inputs that none of are available now leave nothing to show; "*" always says so,
+    // unless every move there is is already a square of a board on screen.
+    private bool Offers(Actions actions) =>
+        Moves is not null && (Offered(actions).Count > 0 || actions.Inputs is null && OnBoards.Count == 0);
+
+    // The blocks of a row that show something now, each with its share of the row.
+    private List<(Block Block, decimal Width)> Present(Columns columns) =>
+        [.. columns.Blocks.Select((b, i) => (Block: b, Width: columns.Widths?[i] ?? 1))
+            .Where(p => Shown(p.Block) && (p.Block is not Actions a || Offers(a)) && (p.Block is not Columns c || Present(c).Count > 0))];
+
+    // Every board on screen, those in columns too: what "*" leaves to them is the whole view's question.
+    private HashSet<ValidInput> OnBoards => [.. Visible(View.Layout).OfType<Board>().SelectMany(b => b.Offered(Moves))];
+
+    private IEnumerable<Block> Visible(IEnumerable<Block> blocks) =>
+        blocks.Where(Shown).SelectMany(b => b is Columns c ? Visible(c.Blocks) : [b]);
 
     // What each field a fill names starts with: the value as it would be typed, so a number stays digits.
     private Dictionary<string, string>? Filled(Actions actions) =>
@@ -204,6 +298,27 @@
         });
 
     private static string? ToneClass(Tone tone) => tone == Tone.neutral ? null : tone.ToString();
+
+    // A text with the values it names written in: a number to the format, a value by the name the view gives it.
+    private string Written(IReadOnlyList<TextPart> parts, Format? format) =>
+        string.Concat(parts.Select(p => p.Bind is null ? p.Words : Read(p.Bind) switch
+        {
+            JsonValue v when v.GetValueKind() == JsonValueKind.Number => (format ?? Plain).Write(v),
+            JsonNode node => Scalar(node),
+            null => "—",
+        }));
+
+    private static readonly Format Plain = new(null, 1, "", "");
+
+    // A count read from the rules, or a list's length: what is done may be the list of it.
+    private static decimal? Number(JsonNode? node) => node switch
+    {
+        JsonValue v when v.GetValueKind() == JsonValueKind.Number => v.GetValue<decimal>(),
+        JsonArray list => list.Count,
+        _ => null,
+    };
+
+    private static string Count(decimal? n) => n is decimal d ? Plain.Write(JsonValue.Create(d))! : "—";
 
     private string Scalar(JsonNode? node) => node switch
     {

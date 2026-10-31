@@ -23,9 +23,38 @@
     @foreach (OpenParameter parameter in Move.Open)
     {
         string[] codes = Refusals?.GetValueOrDefault(parameter.Name) ?? [];
+        Control? control = Controls?.TryGetValue(parameter.Name, out Control c) == true ? c : null;
+        @if (parameter.Op == "type.bool")
+        {
+            @* A yes or no is ticked, never typed. *@
+            <label class="field check @(codes.Length > 0 ? "invalid" : null)">
+                <input type="checkbox" checked="@(values[parameter.Name] == "true")" aria-invalid="@(codes.Length > 0)"
+                       @onchange='@(e => values[parameter.Name] = e.Value is true ? "true" : "false")' />
+                <span class="label">@Names.Param(parameter.Name)</span>
+                @foreach (string refusal in codes)
+                {
+                    <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix="@Say(" refused by the rules", " はルールに拒否されました")" /></span>
+                }
+            </label>
+            continue;
+        }
         <label class="field @(codes.Length > 0 ? "invalid" : null)">
-            <span class="label">@Names.Param(parameter.Name)</span>
-            @if (Choices(parameter) is string[] choices)
+            <span class="label">@Names.Param(parameter.Name)@if (control == Control.Slider)
+            {
+                <output class="slider-value number">@Shown(values[parameter.Name])</output>
+            }</span>
+            @if (control == Control.Slider && Bound(parameter, "min") is decimal low && Bound(parameter, "max") is decimal high)
+            {
+                <input type="range" min="@Invariant(low)" max="@Invariant(high)" step="@(parameter.Op == "type.int" ? "1" : "any")"
+                       value="@values[parameter.Name]" aria-invalid="@(codes.Length > 0)"
+                       @oninput='@(e => values[parameter.Name] = e.Value?.ToString() ?? "")' />
+            }
+            else if (control == Control.Date)
+            {
+                <input type="date" value="@values[parameter.Name]" aria-invalid="@(codes.Length > 0)"
+                       @onchange='@(e => values[parameter.Name] = e.Value?.ToString() ?? "")' />
+            }
+            else if (Choices(parameter) is string[] choices)
             {
                 @* The schema lists every value it admits, so the screen offers them rather than asking for one to be typed. *@
                 <select @bind="values[parameter.Name]" aria-invalid="@(codes.Length > 0)">
@@ -44,7 +73,7 @@
             {
                 <span class="rejection"><Icon Name="alert" Size="14" /><Refusal Code="@refusal" Names="Names" Suffix="@Say(" refused by the rules", " はルールに拒否されました")" /></span>
             }
-            @if (Choices(parameter) is null && Bounds(parameter) is string bounds)
+            @if (Choices(parameter) is null && control != Control.Date && Bounds(parameter) is string bounds)
             {
                 <small>@bounds</small>
             }
@@ -71,6 +100,9 @@
     /// <summary>What a field for a parameter of that name starts with, as the view fills it.</summary>
     [Parameter] public IReadOnlyDictionary<string, string>? Initial { get; set; }
 
+    /// <summary>How a parameter left open is asked for: a slider or a date, where the view says so.</summary>
+    [Parameter] public IReadOnlyDictionary<string, Control>? Controls { get; set; }
+
     private readonly Dictionary<string, string> values = new();
     private string choice = "";
 
@@ -93,7 +125,10 @@
             }
             else
             {
-                values.TryAdd(parameter.Name, "");
+                // A box starts unticked, and a slider where its scale starts; anything else empty.
+                values.TryAdd(parameter.Name, parameter.Op == "type.bool" ? "false"
+                    : Controls?.GetValueOrDefault(parameter.Name) == Control.Slider && Controls.ContainsKey(parameter.Name) && Bound(parameter, "min") is decimal low ? Invariant(low)
+                    : "");
             }
         }
 
@@ -120,6 +155,18 @@
             : null;
 
     private static bool Numeric(OpenParameter parameter) => parameter.Op is "type.int" or "type.decimal";
+
+    // A bound the schema gives the value, "min" or "max"; null for one it leaves out.
+    private static decimal? Bound(OpenParameter parameter, string key) =>
+        parameter.Description.Fields.FirstOrDefault(f => f.Key == key).Value?.GetCanonicalText() is string text
+        && decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal d) ? d : null;
+
+    private static string Invariant(decimal d) => d.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    // A slider's value as a number reads, grouped.
+    private static string Shown(string text) =>
+        decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out decimal d)
+            ? d.ToString("#,0.##########", System.Globalization.CultureInfo.InvariantCulture) : text;
 
     // What the field takes, as a person would say it: "1,000〜10,000,000", "40 文字まで". Bounds with
     // no plain way to say them are left to the refusal, which names the code the view can word.
