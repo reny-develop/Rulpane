@@ -170,6 +170,6 @@ If you write a link by hand and send it in a chat, write each space as `%20` so 
 
   `v` `t` `p`
 
-The formats in full: rule sets in Rulealize's [quick guide](https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md); [views](https://github.com/reny-develop/Rulpane#views), [themes](https://github.com/reny-develop/Rulpane#themes) and [the plugins Rulpane runs](https://github.com/reny-develop/Rulpane#plugins) in Rulpane's README.
+The formats in full: rule sets in Rulealize's [quick guide](https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md); [panesets](https://github.com/reny-develop/Rulpane#panesets), [views](https://github.com/reny-develop/Rulpane#views), [themes](https://github.com/reny-develop/Rulpane#themes) and [the plugins Rulpane runs](https://github.com/reny-develop/Rulpane#plugins) in Rulpane's [README](https://github.com/reny-develop/Rulpane#readme).
 
 A link keeps no secrets: whoever holds it sees everything in it and can take any step.

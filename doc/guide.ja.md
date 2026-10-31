@@ -22,6 +22,6 @@ https://reny-develop.github.io/Rulpane/#p={"$schema":"rulpane/paneset/v1","r":{�
 
   `v` `t` `p`
 
-書式の詳しい説明は、ルールセットが Rulealize の[クイックガイド](https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md)に、[ビュー](https://github.com/reny-develop/Rulpane#views)・[テーマ](https://github.com/reny-develop/Rulpane#themes)・[使えるプラグイン](https://github.com/reny-develop/Rulpane#plugins)が Rulpane の README にあります。
+書き方の詳しい説明は、ルールセットが Rulealize の[クイックガイド](https://github.com/reny-develop/Rulealize/blob/main/doc/ruleset-quickguide.md)に、[ペインセット](https://github.com/reny-develop/Rulpane#panesets)・[ビュー](https://github.com/reny-develop/Rulpane#views)・[テーマ](https://github.com/reny-develop/Rulpane#themes)と[使えるプラグイン](https://github.com/reny-develop/Rulpane#plugins)が Rulpane の [README](https://github.com/reny-develop/Rulpane#readme) にあります。
 
 リンクには秘密を持てません。リンクを持つ人は誰でも中身を見られ、どの操作もできます。
